@@ -1,11 +1,27 @@
 import { useState } from "react";
 import InfoCard from "../components/InfoCard";
 import mockUsers from "../utils/mockUsers";
+import { loadLatestSimulationResult } from "../utils/simulationResultStorage";
 import "../styles/auth.css";
 
 function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [message, setMessage] = useState("");
+
+  const latestResult = loadLatestSimulationResult();
+
+  const latestActiveUser = latestResult
+    ? {
+        id: "LATEST-USER",
+        fullName: latestResult.callerName || "Mock felhasználó",
+        username: "mock.user",
+        role: "USER",
+        completedScenarios: 1,
+        lastScenarioTitle: latestResult.title,
+        lastScenarioDate: latestResult.date,
+        lastScenarioScore: latestResult.score,
+      }
+    : null;
 
   const handleShowDetails = (user) => {
     setSelectedUser(user);
@@ -26,6 +42,27 @@ function AdminUsersPage() {
         Itt jelennek meg a rendszer felhasználói. Később innen lehet majd
         jelszót visszaállítani és a részletes adatokat megtekinteni.
       </p>
+
+      {latestActiveUser && (
+        <div style={{ marginTop: "24px", marginBottom: "28px" }}>
+          <h3>Legutóbb aktív felhasználó</h3>
+
+          <InfoCard
+            title={`${latestActiveUser.fullName} (${latestActiveUser.role})`}
+          >
+            <p><strong>Felhasználónév:</strong> {latestActiveUser.username}</p>
+            <p>
+              <strong>Utolsó szituáció:</strong> {latestActiveUser.lastScenarioTitle}
+            </p>
+            <p>
+              <strong>Utolsó teljesítés ideje:</strong> {latestActiveUser.lastScenarioDate}
+            </p>
+            <p>
+              <strong>Utolsó pontszám:</strong> {latestActiveUser.lastScenarioScore}%
+            </p>
+          </InfoCard>
+        </div>
+      )}
 
       {message && (
         <div
