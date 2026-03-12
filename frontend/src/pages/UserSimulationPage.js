@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../styles/auth.css";
+import "../styles/simulation.css";
 
 function UserSimulationPage() {
   const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
@@ -96,193 +97,258 @@ function UserSimulationPage() {
     );
   };
 
+  const availabilityLabel =
+    availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
+
+  const callStateLabelMap = {
+    IDLE: "Nincs aktív várakozás",
+    WAITING: "Várakozás bejövő hívásra",
+    RINGING: "Bejövő hívás",
+    ACCEPTED: "Hívás fogadva",
+  };
+
   return (
-    <div>
-      <h2>Szituáció indítása</h2>
-      <p>
-        Itt fog a felhasználó szabad állapotba kerülni, várni a bejövő hívásra,
-        majd kitölteni a szimulációhoz tartozó adatlapot.
-      </p>
+    <div className="simulation-page">
+      <div className="simulation-topbar">
+        <div>
+          <h2 className="simulation-topbar-title">112 Operátori felület</h2>
+          <p className="simulation-topbar-subtitle">
+            Szimulációs híváskezelés és adatlapkitöltés
+          </p>
+        </div>
 
-      <div
-        style={{
-          marginTop: "24px",
-          padding: "20px",
-          border: "1px solid #dcdcdc",
-          borderRadius: "12px",
-          backgroundColor: "#ffffff",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Operátori állapot</h3>
-
-        <p>
-          <strong>Jelenlegi státusz:</strong>{" "}
-          {availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad"}
-        </p>
-
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className="admin-action-button"
-            onClick={handleSetAvailable}
-          >
-            Szabad állapot
-          </button>
-
-          <button
-            type="button"
-            className="admin-action-button"
-            onClick={handleSetUnavailable}
-          >
-            Nem szabad állapot
-          </button>
+        <div
+          className={`simulation-status-badge ${
+            availabilityStatus === "AVAILABLE" ? "available" : "busy"
+          }`}
+        >
+          Operátori státusz: {availabilityLabel}
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: "20px",
-          padding: "20px",
-          border: "1px solid #dcdcdc",
-          borderRadius: "12px",
-          backgroundColor: "#ffffff",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Hívásállapot</h3>
+      <div className="simulation-layout">
+        <div>
+          <div className="simulation-panel">
+            <h3>Híváskezelés</h3>
 
-        {callState === "IDLE" && (
-          <p>A felhasználó jelenleg nem vár bejövő hívásra.</p>
-        )}
-
-        {callState === "WAITING" && (
-          <>
-            <p>
-              A felhasználó szabad állapotban van. Itt később random idő után
-              fog megérkezni a szituációhoz tartozó hívás.
-            </p>
-
-            <button
-              type="button"
-              className="admin-action-button"
-              onClick={handleMockIncomingCall}
-            >
-              Mock bejövő hívás
-            </button>
-          </>
-        )}
-
-        {callState === "RINGING" && (
-          <>
-            <p>
-              Bejövő hívás érkezett. Itt később csörgés és szituációindítás fog
-              történni.
-            </p>
-
-            <button
-              type="button"
-              className="admin-action-button"
-              onClick={handleAcceptCall}
-            >
-              Hívás fogadása
-            </button>
-          </>
-        )}
-
-        {callState === "ACCEPTED" && (
-          <>
-            <p>
-              A hívás fogadva lett. Töltsd ki a szimulációhoz tartozó adatlapot.
-            </p>
-
-            <form
-              className="auth-form"
-              onSubmit={handleSubmitSimulation}
-              style={{ marginTop: "20px" }}
-            >
-              <div className="auth-form-group">
-                <label htmlFor="callerName">Bejelentő neve</label>
-                <input
-                  id="callerName"
-                  name="callerName"
-                  type="text"
-                  placeholder="Add meg a bejelentő nevét"
-                  value={formData.callerName}
-                  onChange={handleChange}
-                />
-                {errors.callerName && (
-                  <p className="auth-error">{errors.callerName}</p>
-                )}
-              </div>
-
-              <div className="auth-form-group">
-                <label htmlFor="callerPhone">Telefonszám</label>
-                <input
-                  id="callerPhone"
-                  name="callerPhone"
-                  type="text"
-                  placeholder="Add meg a telefonszámot"
-                  value={formData.callerPhone}
-                  onChange={handleChange}
-                />
-                {errors.callerPhone && (
-                  <p className="auth-error">{errors.callerPhone}</p>
-                )}
-              </div>
-
-              <div className="auth-form-group">
-                <label htmlFor="location">Helyszín</label>
-                <input
-                  id="location"
-                  name="location"
-                  type="text"
-                  placeholder="Add meg a helyszínt"
-                  value={formData.location}
-                  onChange={handleChange}
-                />
-                {errors.location && (
-                  <p className="auth-error">{errors.location}</p>
-                )}
-              </div>
-
-              <div className="auth-form-group">
-                <label htmlFor="eventDescription">Esemény leírása</label>
-                <input
-                  id="eventDescription"
-                  name="eventDescription"
-                  type="text"
-                  placeholder="Röviden írd le az eseményt"
-                  value={formData.eventDescription}
-                  onChange={handleChange}
-                />
-                {errors.eventDescription && (
-                  <p className="auth-error">{errors.eventDescription}</p>
-                )}
-              </div>
-
-              <div className="auth-form-group">
-                <label htmlFor="note">Jegyzet</label>
-                <textarea
-                  id="note"
-                  name="note"
-                  rows="5"
-                  placeholder="Írd le a hívás lényegét"
-                  value={formData.note}
-                  onChange={handleChange}
-                  style={{ resize: "vertical" }}
-                />
-                {errors.note && <p className="auth-error">{errors.note}</p>}
-              </div>
-
-              {message && <div className="form-message">{message}</div>}
-
-              <button type="submit" className="auth-form-button">
-                Adatlap beküldése
+            <div className="simulation-action-row" style={{ marginBottom: "16px" }}>
+              <button
+                type="button"
+                className="admin-action-button"
+                onClick={handleSetAvailable}
+              >
+                Szabad állapot
               </button>
-            </form>
-          </>
-        )}
+
+              <button
+                type="button"
+                className="admin-action-button"
+                onClick={handleSetUnavailable}
+              >
+                Nem szabad állapot
+              </button>
+            </div>
+
+            <div
+              className={`simulation-call-box ${
+                callState === "RINGING"
+                  ? "ringing"
+                  : callState === "ACCEPTED"
+                  ? "accepted"
+                  : ""
+              }`}
+            >
+              {callState === "IDLE" && (
+                <p className="simulation-note">
+                  A felhasználó jelenleg nem vár bejövő hívásra.
+                </p>
+              )}
+
+              {callState === "WAITING" && (
+                <>
+                  <p className="simulation-note">
+                    A felhasználó szabad állapotban van. Itt később random idő után
+                    fog megérkezni a szituációhoz tartozó hívás.
+                  </p>
+
+                  <div style={{ marginTop: "14px" }}>
+                    <button
+                      type="button"
+                      className="admin-action-button"
+                      onClick={handleMockIncomingCall}
+                    >
+                      Mock bejövő hívás
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {callState === "RINGING" && (
+                <>
+                  <p className="simulation-note">
+                    Bejövő hívás érkezett. Itt később csörgés, hanganyag és
+                    időzített szituációindítás fog történni.
+                  </p>
+
+                  <div style={{ marginTop: "14px" }}>
+                    <button
+                      type="button"
+                      className="admin-action-button"
+                      onClick={handleAcceptCall}
+                    >
+                      Hívás fogadása
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {callState === "ACCEPTED" && (
+                <p className="simulation-note">
+                  A hívás fogadva lett. Töltsd ki a híváskezelési adatlapot az
+                  alábbi mezők segítségével.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="simulation-panel">
+            <h3>Bejelentési adatlap</h3>
+
+            {callState !== "ACCEPTED" ? (
+              <p className="simulation-note">
+                Az adatlap a hívás fogadása után válik aktívvá.
+              </p>
+            ) : (
+              <form className="auth-form" onSubmit={handleSubmitSimulation}>
+                <div className="auth-form-group">
+                  <label htmlFor="callerName">Bejelentő neve</label>
+                  <input
+                    id="callerName"
+                    name="callerName"
+                    type="text"
+                    placeholder="Add meg a bejelentő nevét"
+                    value={formData.callerName}
+                    onChange={handleChange}
+                  />
+                  {errors.callerName && (
+                    <p className="auth-error">{errors.callerName}</p>
+                  )}
+                </div>
+
+                <div className="auth-form-group">
+                  <label htmlFor="callerPhone">Telefonszám</label>
+                  <input
+                    id="callerPhone"
+                    name="callerPhone"
+                    type="text"
+                    placeholder="Add meg a telefonszámot"
+                    value={formData.callerPhone}
+                    onChange={handleChange}
+                  />
+                  {errors.callerPhone && (
+                    <p className="auth-error">{errors.callerPhone}</p>
+                  )}
+                </div>
+
+                <div className="auth-form-group">
+                  <label htmlFor="location">Helyszín</label>
+                  <input
+                    id="location"
+                    name="location"
+                    type="text"
+                    placeholder="Add meg a helyszínt"
+                    value={formData.location}
+                    onChange={handleChange}
+                  />
+                  {errors.location && (
+                    <p className="auth-error">{errors.location}</p>
+                  )}
+                </div>
+
+                <div className="auth-form-group">
+                  <label htmlFor="eventDescription">Esemény leírása</label>
+                  <input
+                    id="eventDescription"
+                    name="eventDescription"
+                    type="text"
+                    placeholder="Röviden írd le az eseményt"
+                    value={formData.eventDescription}
+                    onChange={handleChange}
+                  />
+                  {errors.eventDescription && (
+                    <p className="auth-error">{errors.eventDescription}</p>
+                  )}
+                </div>
+
+                <div className="auth-form-group">
+                  <label htmlFor="note">Jegyzet</label>
+                  <textarea
+                    id="note"
+                    name="note"
+                    rows="6"
+                    placeholder="Írd le a hívás lényegét"
+                    value={formData.note}
+                    onChange={handleChange}
+                    style={{ resize: "vertical" }}
+                  />
+                  {errors.note && <p className="auth-error">{errors.note}</p>}
+                </div>
+
+                {message && <div className="form-message">{message}</div>}
+
+                <button type="submit" className="auth-form-button">
+                  Adatlap beküldése
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        <div className="simulation-side-stack">
+          <div className="simulation-panel">
+            <h3>Aktuális állapot</h3>
+
+            <div className="simulation-info-grid">
+              <div className="simulation-info-card">
+                <p className="simulation-info-label">Operátor</p>
+                <p className="simulation-info-value">{availabilityLabel}</p>
+              </div>
+
+              <div className="simulation-info-card">
+                <p className="simulation-info-label">Hívás</p>
+                <p className="simulation-info-value">{callStateLabelMap[callState]}</p>
+              </div>
+
+              <div className="simulation-info-card">
+                <p className="simulation-info-label">Forrás</p>
+                <p className="simulation-info-value">Mock szituáció</p>
+              </div>
+
+              <div className="simulation-info-card">
+                <p className="simulation-info-label">Mód</p>
+                <p className="simulation-info-value">Gyakorlás</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="simulation-panel">
+            <h3>Operátori információk</h3>
+            <p className="simulation-note">
+              A végleges felületen itt jelenhet meg például a hívás időtartama,
+              a generált esetszám, a hanganyag állapota és a kapcsolódó
+              kiegészítő információk.
+            </p>
+
+            <hr className="simulation-divider" />
+
+            <div className="simulation-highlight">
+              <p>
+                <strong>Következő lépés:</strong> az adatlap sikeres beküldése után
+                a készenléti szervek kiválasztása fog következni.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
