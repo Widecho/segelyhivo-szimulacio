@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AuthLayout from "../layouts/AuthLayout";
+import { registerUser } from "../services/authService";
 import "../styles/auth.css";
 
 function RegisterPage() {
@@ -12,6 +13,7 @@ function RegisterPage() {
 
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -63,7 +65,7 @@ function RegisterPage() {
     return newErrors;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const validationErrors = validateForm();
@@ -75,7 +77,16 @@ function RegisterPage() {
     }
 
     setErrors({});
-    setMessage("A kliensoldali ellenőrzés sikeres. A backend bekötése később jön.");
+    setIsSubmitting(true);
+
+    try {
+      const result = await registerUser(formData);
+      setMessage(result.message);
+    } catch (error) {
+      setMessage("Váratlan hiba történt a regisztráció során.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -141,8 +152,12 @@ function RegisterPage() {
 
         {message && <p className="auth-success">{message}</p>}
 
-        <button type="submit" className="auth-form-button">
-          Regisztráció
+        <button
+          type="submit"
+          className="auth-form-button"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Folyamatban..." : "Regisztráció"}
         </button>
       </form>
     </AuthLayout>
