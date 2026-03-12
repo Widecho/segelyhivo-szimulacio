@@ -1,4 +1,4 @@
-function InfoCard({ title, children }) {
+function InfoCard({ title, children, footer }) {
   return (
     <div
       style={{
@@ -11,7 +11,20 @@ function InfoCard({ title, children }) {
       }}
     >
       <h3 style={{ marginTop: 0, marginBottom: "12px" }}>{title}</h3>
+
       <div>{children}</div>
+
+      {footer && (
+        <div
+          style={{
+            marginTop: "16px",
+            paddingTop: "12px",
+            borderTop: "1px solid #eeeeee",
+          }}
+        >
+          {footer}
+        </div>
+      )}
     </div>
   );
 }
