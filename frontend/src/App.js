@@ -6,6 +6,8 @@ import RegisterPage from "./pages/RegisterPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import { AuthProvider } from "./services/AuthContext";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import RoleRoute from "./routes/RoleRoute";
 
 function App() {
   return (
@@ -20,8 +22,28 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/dashboard/user" element={<UserDashboardPage />} />
-            <Route path="/dashboard/admin" element={<AdminDashboardPage />} />
+
+            <Route
+              path="/dashboard/user"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRole="USER">
+                    <UserDashboardPage />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/dashboard/admin"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRole="ADMIN">
+                    <AdminDashboardPage />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
       </BrowserRouter>
