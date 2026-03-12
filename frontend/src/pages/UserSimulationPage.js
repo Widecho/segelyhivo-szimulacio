@@ -1,18 +1,30 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
+import mockScenarios from "../utils/mockScenarios";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
+import { loadLatestCustomScenario } from "../utils/scenarioStorage";
 import "../styles/auth.css";
 import "../styles/simulation.css";
 
 function UserSimulationPage() {
   const navigate = useNavigate();
 
+  const activeScenario = useMemo(() => {
+    const latestCustomScenario = loadLatestCustomScenario();
+
+    if (latestCustomScenario) {
+      return latestCustomScenario;
+    }
+
+    return mockScenarios[0];
+  }, []);
+
   const initialFormData = {
     callerName: "",
     callerPhone: "",
-    location: "",
-    eventDescription: "",
+    location: activeScenario?.address || "",
+    eventDescription: activeScenario?.title || "",
     note: "",
   };
 
@@ -24,7 +36,11 @@ function UserSimulationPage() {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
 
-  const expectedUnits = ["Heves VMKI", "OMSZ Heves", "Heves VMRFK"];
+  const expectedUnits = activeScenario?.requiredUnits || [
+    "Heves VMKI",
+    "OMSZ Heves",
+    "Heves VMRFK",
+  ];
 
   const handleSetAvailable = () => {
     setAvailabilityStatus("AVAILABLE");
@@ -139,56 +155,58 @@ function UserSimulationPage() {
   };
 
   const handleSubmitUnits = () => {
-  if (selectedUnits.length < 1) {
+    if (selectedUnits.length < 1) {
+      setErrors((prev) => ({
+        ...prev,
+        selectedUnits: "Legalább egy készenléti szerv kiválasztása kötelező.",
+      }));
+      setMessage("");
+      return;
+    }
+
     setErrors((prev) => ({
       ...prev,
-      selectedUnits: "Legalább egy készenléti szerv kiválasztása kötelező.",
+      selectedUnits: "",
     }));
+
+    const matchedUnitsLocal = selectedUnits.filter((unit) =>
+      expectedUnits.includes(unit)
+    );
+
+    const missingUnitsLocal = expectedUnits.filter(
+      (unit) => !selectedUnits.includes(unit)
+    );
+
+    const incorrectUnitsLocal = selectedUnits.filter(
+      (unit) => !expectedUnits.includes(unit)
+    );
+
+    const score = Math.max(
+      0,
+      100 - missingUnitsLocal.length * 20 - incorrectUnitsLocal.length * 15
+    );
+
+    const resultPayload = {
+      id: `RESULT-${Date.now()}`,
+      scenarioId: activeScenario?.id || "MOCK-SCENARIO",
+      title: formData.eventDescription || activeScenario?.title || "Mock szituáció",
+      date: new Date().toLocaleString("hu-HU"),
+      location: formData.location,
+      callerName: formData.callerName,
+      selectedUnits,
+      matchedUnits: matchedUnitsLocal,
+      missingUnits: missingUnitsLocal,
+      incorrectUnits: incorrectUnitsLocal,
+      score,
+      status:
+        score >= 80 ? "Sikeres" : score >= 50 ? "Részben sikeres" : "Sikertelen",
+    };
+
+    saveLatestSimulationResult(resultPayload);
+
     setMessage("");
-    return;
-  }
-
-  setErrors((prev) => ({
-    ...prev,
-    selectedUnits: "",
-  }));
-
-  const matchedUnitsLocal = selectedUnits.filter((unit) =>
-    expectedUnits.includes(unit)
-  );
-
-  const missingUnitsLocal = expectedUnits.filter(
-    (unit) => !selectedUnits.includes(unit)
-  );
-
-  const incorrectUnitsLocal = selectedUnits.filter(
-    (unit) => !expectedUnits.includes(unit)
-  );
-
-  const score = Math.max(
-    0,
-    100 - missingUnitsLocal.length * 20 - incorrectUnitsLocal.length * 15
-  );
-
-  const resultPayload = {
-    id: `RESULT-${Date.now()}`,
-    title: formData.eventDescription || "Mock szituáció",
-    date: new Date().toLocaleString("hu-HU"),
-    location: formData.location,
-    callerName: formData.callerName,
-    selectedUnits,
-    matchedUnits: matchedUnitsLocal,
-    missingUnits: missingUnitsLocal,
-    incorrectUnits: incorrectUnitsLocal,
-    score,
-    status: score >= 80 ? "Sikeres" : score >= 50 ? "Részben sikeres" : "Sikertelen",
+    setSimulationStep("EVALUATION");
   };
-
-  saveLatestSimulationResult(resultPayload);
-
-  setMessage("");
-  setSimulationStep("EVALUATION");
-};
 
   const handleRestartSimulation = () => {
     setAvailabilityStatus("NOT_READY");
@@ -260,6 +278,18 @@ function UserSimulationPage() {
         <div>
           <div className="simulation-panel">
             <h3>Híváskezelés</h3>
+
+            <div className="simulation-highlight" style={{ marginBottom: "16px" }}>
+              <p>
+                <strong>Aktív mock szituáció:</strong> {activeScenario?.title}
+              </p>
+              <p style={{ marginTop: "8px" }}>
+                <strong>Szituációazonosító:</strong> {activeScenario?.id}
+              </p>
+              <p style={{ marginTop: "8px" }}>
+                <strong>Elvárt egységek:</strong> {expectedUnits.join(", ")}
+              </p>
+            </div>
 
             <div className="simulation-action-row" style={{ marginBottom: "16px" }}>
               <button
@@ -547,7 +577,9 @@ function UserSimulationPage() {
 
               <div className="simulation-info-card">
                 <p className="simulation-info-label">Forrás</p>
-                <p className="simulation-info-value">Mock szituáció</p>
+                <p className="simulation-info-value">
+                  {activeScenario?.id || "Mock szituáció"}
+                </p>
               </div>
 
               <div className="simulation-info-card">

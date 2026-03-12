@@ -49,3 +49,13 @@ export function updateCustomScenario(updatedScenario) {
     JSON.stringify(updatedScenarios)
   );
 }
+
+export function loadLatestCustomScenario() {
+  const scenarios = loadCustomScenarios();
+
+  if (scenarios.length === 0) {
+    return null;
+  }
+
+  return scenarios[0];
+}
