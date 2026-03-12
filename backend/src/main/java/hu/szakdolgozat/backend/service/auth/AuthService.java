@@ -7,6 +7,7 @@ import hu.szakdolgozat.backend.entity.AppUser;
 import hu.szakdolgozat.backend.entity.Role;
 import hu.szakdolgozat.backend.repository.AppUserRepository;
 import hu.szakdolgozat.backend.repository.RoleRepository;
+import hu.szakdolgozat.backend.security.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,15 +24,18 @@ public class AuthService {
     private final AppUserRepository appUserRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public AuthService(
             AppUserRepository appUserRepository,
             RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService
     ) {
         this.appUserRepository = appUserRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     @Transactional
@@ -69,11 +73,13 @@ public class AuthService {
         user.setIsActive(true);
 
         AppUser savedUser = appUserRepository.save(user);
+        String token = jwtService.generateToken(savedUser);
 
         return new AuthResponse(
                 "Sikeres regisztráció.",
                 savedUser.getUsername(),
-                savedUser.getRole().getName()
+                savedUser.getRole().getName(),
+                token
         );
     }
 
@@ -100,10 +106,13 @@ public class AuthService {
                 appUserRepository.save(user);
             }
 
+            String token = jwtService.generateToken(user);
+
             return new AuthResponse(
                     "Sikeres bejelentkezés.",
                     user.getUsername(),
-                    user.getRole().getName()
+                    user.getRole().getName(),
+                    token
             );
         }
 
