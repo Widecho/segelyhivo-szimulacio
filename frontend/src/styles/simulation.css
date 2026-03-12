@@ -313,3 +313,9 @@
 .simulation-map-meta p + p {
   margin-top: 8px;
 }
+.simulation-finish-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}

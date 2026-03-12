@@ -1,19 +1,24 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import "../styles/auth.css";
 import "../styles/simulation.css";
 
 function UserSimulationPage() {
-  const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
-  const [callState, setCallState] = useState("IDLE");
-  const [simulationStep, setSimulationStep] = useState("FORM");
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+
+  const initialFormData = {
     callerName: "",
     callerPhone: "",
     location: "",
     eventDescription: "",
     note: "",
-  });
+  };
+
+  const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
+  const [callState, setCallState] = useState("IDLE");
+  const [simulationStep, setSimulationStep] = useState("FORM");
+  const [formData, setFormData] = useState(initialFormData);
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
@@ -26,6 +31,8 @@ function UserSimulationPage() {
     setSimulationStep("FORM");
     setMessage("");
     setSelectedUnits([]);
+    setFormData(initialFormData);
+    setErrors({});
   };
 
   const handleSetUnavailable = () => {
@@ -35,6 +42,7 @@ function UserSimulationPage() {
     setMessage("");
     setErrors({});
     setSelectedUnits([]);
+    setFormData(initialFormData);
   };
 
   const handleMockIncomingCall = () => {
@@ -146,6 +154,20 @@ function UserSimulationPage() {
 
     setMessage("");
     setSimulationStep("EVALUATION");
+  };
+
+  const handleRestartSimulation = () => {
+    setAvailabilityStatus("NOT_READY");
+    setCallState("IDLE");
+    setSimulationStep("FORM");
+    setFormData(initialFormData);
+    setSelectedUnits([]);
+    setErrors({});
+    setMessage("");
+  };
+
+  const handleBackToDashboard = () => {
+    navigate("/dashboard/user");
   };
 
   const availabilityLabel =
@@ -449,6 +471,24 @@ function UserSimulationPage() {
                     megjelenni a részletes visszajelzés és a tárolt eredmény.
                   </p>
                 </div>
+
+                <div className="simulation-finish-actions">
+                  <button
+                    type="button"
+                    className="auth-form-button"
+                    onClick={handleRestartSimulation}
+                  >
+                    Új szimuláció indítása
+                  </button>
+
+                  <button
+                    type="button"
+                    className="admin-action-button"
+                    onClick={handleBackToDashboard}
+                  >
+                    Vissza az irányítópultra
+                  </button>
+                </div>
               </div>
             )}
 
@@ -487,37 +527,37 @@ function UserSimulationPage() {
             </div>
           </div>
 
-<div className="simulation-panel">
-  <h3>Helyszín és térkép</h3>
+          <div className="simulation-panel">
+            <h3>Helyszín és térkép</h3>
 
-  <div className="simulation-map-card">
-    <div className="simulation-map-meta">
-      <p>
-        <strong>Megadott helyszín:</strong>{" "}
-        {formData.location.trim() ? formData.location : "Még nincs megadva"}
-      </p>
+            <div className="simulation-map-card">
+              <div className="simulation-map-meta">
+                <p>
+                  <strong>Megadott helyszín:</strong>{" "}
+                  {formData.location.trim() ? formData.location : "Még nincs megadva"}
+                </p>
 
-      <p>
-        <strong>Térképi állapot:</strong> A tényleges térképintegráció későbbi
-        lépésben kerül ide, a jobb alsó panelbe.
-      </p>
-    </div>
+                <p>
+                  <strong>Térképi állapot:</strong> A tényleges térképintegráció későbbi
+                  lépésben kerül ide, a jobb alsó panelbe.
+                </p>
+              </div>
 
-    <div className="simulation-map-placeholder">
-            {formData.location.trim()
-                ? `Térkép helye – a megadott címhez tartozó nézet később itt fog megjelenni:
-        ${formData.location}`
-                : "Térkép helye – a helyszín megadása után itt fog megjelenni a címhez tartozó térképi nézet."}
+              <div className="simulation-map-placeholder">
+                {formData.location.trim()
+                  ? `Térkép helye – a megadott címhez tartozó nézet később itt fog megjelenni:
+${formData.location}`
+                  : "Térkép helye – a helyszín megadása után itt fog megjelenni a címhez tartozó térképi nézet."}
+              </div>
+
+              <div className="simulation-highlight">
+                <p>
+                  <strong>Kiválasztott egységek:</strong>{" "}
+                  {selectedUnits.length > 0 ? selectedUnits.join(", ") : "Még nincs kijelölés"}
+                </p>
+              </div>
             </div>
-
-            <div className="simulation-highlight">
-            <p>
-                <strong>Kiválasztott egységek:</strong>{" "}
-                {selectedUnits.length > 0 ? selectedUnits.join(", ") : "Még nincs kijelölés"}
-            </p>
-            </div>
-        </div>
-        </div>
+          </div>
         </div>
       </div>
     </div>
