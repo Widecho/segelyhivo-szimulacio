@@ -23,6 +23,7 @@ function UserDashboardPage() {
         <DashboardCard
           title="Szituáció indítása"
           description="Innen fogod elérni a beérkező hívásokat és a szimulációs felületet."
+          to="/user/simulation"
         />
 
         <DashboardCard

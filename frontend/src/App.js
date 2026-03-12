@@ -11,6 +11,7 @@ import AdminCreateScenarioPage from "./pages/AdminCreateScenarioPage";
 import AdminScenariosPage from "./pages/AdminScenariosPage";
 import AdminUserResultsPage from "./pages/AdminUserResultsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import UserSimulationPage from "./pages/UserSimulationPage";
 import { AuthProvider } from "./services/AuthContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -46,6 +47,17 @@ function App() {
                 <ProtectedRoute>
                   <RoleRoute allowedRole="ADMIN">
                     <AdminDashboardPage />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/user/simulation"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRole="USER">
+                    <UserSimulationPage />
                   </RoleRoute>
                 </ProtectedRoute>
               }

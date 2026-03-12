@@ -32,6 +32,10 @@ function Navigation() {
             Irányítópult
           </Link>
 
+          <Link to="/user/simulation" style={linkStyle}>
+            Szimuláció
+          </Link>
+
           <Link to="/user/results" style={linkStyle}>
             Saját eredmények
           </Link>
