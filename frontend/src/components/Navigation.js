@@ -1,98 +1,104 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
 
-function Navigation() {
-  const { authState, logout } = useAuth();
+function linkStyle() {
+  return {
+    textDecoration: "none",
+    color: "#1f3c88",
+    fontWeight: 600,
+  };
+}
 
-  const linkStyle = {
-    marginRight: "16px",
+function buttonStyle() {
+  return {
+    padding: "8px 14px",
+    borderRadius: "8px",
+    border: "1px solid #cfcfcf",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    fontWeight: 600,
+  };
+}
+
+function Navigation() {
+  const navigate = useNavigate();
+  const { isAuthenticated, role, username, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
   return (
-    <nav style={{ marginBottom: "24px" }}>
-      <Link to="/" style={linkStyle}>
-        Kezdőoldal
-      </Link>
-
-      {!authState.isAuthenticated && (
-        <>
-          <Link to="/login" style={linkStyle}>
+    <nav
+      style={{
+        marginBottom: "28px",
+        padding: "14px 18px",
+        border: "1px solid #dddddd",
+        borderRadius: "12px",
+        backgroundColor: "#fafafa",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "14px",
+      }}
+    >
+      {!isAuthenticated ? (
+        <div style={{ display: "flex", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
+          <Link to="/" style={linkStyle()}>
+            Kezdőlap
+          </Link>
+          <Link to="/login" style={linkStyle()}>
             Bejelentkezés
           </Link>
-
-          <Link to="/register" style={linkStyle}>
+          <Link to="/register" style={linkStyle()}>
             Regisztráció
           </Link>
-        </>
-      )}
-
-      {authState.isAuthenticated && authState.role === "USER" && (
+        </div>
+      ) : (
         <>
-          <Link to="/dashboard/user" style={linkStyle}>
-            Irányítópult
-          </Link>
+          <div style={{ fontWeight: 700 }}>
+            {username} ({role})
+          </div>
 
-          <Link to="/user/simulation" style={linkStyle}>
-            Szimuláció
-          </Link>
+          <div style={{ display: "flex", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
+            {role === "ADMIN" ? (
+              <>
+                <Link to="/dashboard/admin" style={linkStyle()}>
+                  Admin főoldal
+                </Link>
+                <Link to="/admin/users" style={linkStyle()}>
+                  Felhasználók
+                </Link>
+                <Link to="/admin/scenarios" style={linkStyle()}>
+                  Szituációk
+                </Link>
+                <Link to="/admin/results" style={linkStyle()}>
+                  Eredmények
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/dashboard/user" style={linkStyle()}>
+                  Saját felület
+                </Link>
+                <Link to="/user/simulation" style={linkStyle()}>
+                  Szimuláció
+                </Link>
+                <Link to="/user/results" style={linkStyle()}>
+                  Eredmények
+                </Link>
+                <Link to="/profile" style={linkStyle()}>
+                  Profil
+                </Link>
+              </>
+            )}
 
-          <Link to="/user/results" style={linkStyle}>
-            Saját eredmények
-          </Link>
-
-          <Link to="/profile" style={linkStyle}>
-            Profil
-          </Link>
-        </>
-      )}
-
-      {authState.isAuthenticated && authState.role === "ADMIN" && (
-        <>
-          <Link to="/dashboard/admin" style={linkStyle}>
-            Irányítópult
-          </Link>
-
-          <Link to="/admin/scenarios/new" style={linkStyle}>
-            Új szituáció
-          </Link>
-
-          <Link to="/admin/scenarios" style={linkStyle}>
-            Szituációk
-          </Link>
-
-          <Link to="/admin/results" style={linkStyle}>
-            Eredmények
-          </Link>
-
-          <Link to="/admin/users" style={linkStyle}>
-            Felhasználók
-          </Link>
-
-          <Link to="/profile" style={linkStyle}>
-            Profil
-          </Link>
-        </>
-      )}
-
-      {authState.isAuthenticated && (
-        <>
-          <span style={{ marginRight: "16px" }}>
-            Belépve: {authState.username} ({authState.role})
-          </span>
-
-          <button
-            type="button"
-            onClick={logout}
-            style={{
-              padding: "8px 12px",
-              borderRadius: "8px",
-              border: "1px solid #cccccc",
-              backgroundColor: "#ffffff",
-              cursor: "pointer",
-            }}
-          >
-            Kijelentkezés
-          </button>
+            <button type="button" onClick={handleLogout} style={buttonStyle()}>
+              Kijelentkezés
+            </button>
+          </div>
         </>
       )}
     </nav>

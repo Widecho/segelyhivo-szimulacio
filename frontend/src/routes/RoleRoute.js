@@ -2,13 +2,13 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
 
 function RoleRoute({ allowedRole, children }) {
-  const { authState } = useAuth();
+  const { role, isLoading } = useAuth();
 
-  if (!authState.isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (isLoading) {
+    return <p>Betöltés...</p>;
   }
 
-  if (authState.role !== allowedRole) {
+  if (role !== allowedRole) {
     return <Navigate to="/" replace />;
   }
 

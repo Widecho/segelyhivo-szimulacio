@@ -1,20 +1,37 @@
-const wait = (milliseconds) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
+const API_BASE_URL = "http://localhost:8081/api";
 
-export const loginUser = async (loginData) => {
-  await wait(500);
+export async function loginRequest(credentials) {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(credentials),
+  });
 
-  return {
-    success: true,
-    message: `Sikeres bejelentkezési próbálkozás: ${loginData.username}`,
-  };
-};
+  const data = await response.json().catch(() => ({}));
 
-export const registerUser = async (registerData) => {
-  await wait(500);
+  if (!response.ok) {
+    throw new Error(data.message || "Sikertelen bejelentkezés.");
+  }
 
-  return {
-    success: true,
-    message: `Sikeres regisztrációs próbálkozás: ${registerData.username}`,
-  };
-};
+  return data;
+}
+
+export async function registerRequest(payload) {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || "Sikertelen regisztráció.");
+  }
+
+  return data;
+}

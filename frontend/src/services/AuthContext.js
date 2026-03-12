@@ -1,54 +1,87 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { clearAuth, loadAuth, saveAuth } from "../utils/authStorage";
 
 const AuthContext = createContext(null);
 
-const AUTH_STORAGE_KEY = "segelyhivo-auth";
-
-const defaultAuthState = {
-  isAuthenticated: false,
-  username: "",
-  role: "",
-};
-
-function getInitialAuthState() {
-  const storedValue = localStorage.getItem(AUTH_STORAGE_KEY);
-
-  if (!storedValue) {
-    return defaultAuthState;
+function normalizeRole(role) {
+  if (!role) {
+    return null;
   }
 
-  try {
-    return JSON.parse(storedValue);
-  } catch (error) {
-    return defaultAuthState;
-  }
+  return String(role).toUpperCase();
 }
 
 export function AuthProvider({ children }) {
-  const [authState, setAuthState] = useState(getInitialAuthState);
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    username: null,
+    role: null,
+    token: null,
+    isLoading: true,
+  });
 
   useEffect(() => {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authState));
-  }, [authState]);
+    const storedAuth = loadAuth();
 
-  const login = ({ username, role }) => {
+    if (storedAuth?.token && storedAuth?.username && storedAuth?.role) {
+      setAuthState({
+        isAuthenticated: true,
+        username: storedAuth.username,
+        role: normalizeRole(storedAuth.role),
+        token: storedAuth.token,
+        isLoading: false,
+      });
+      return;
+    }
+
+    setAuthState({
+      isAuthenticated: false,
+      username: null,
+      role: null,
+      token: null,
+      isLoading: false,
+    });
+  }, []);
+
+  const login = ({ username, role, token }) => {
+    const normalizedRole = normalizeRole(role);
+
+    const authPayload = {
+      username,
+      role: normalizedRole,
+      token,
+    };
+
+    saveAuth(authPayload);
+
     setAuthState({
       isAuthenticated: true,
       username,
-      role,
+      role: normalizedRole,
+      token,
+      isLoading: false,
     });
   };
 
   const logout = () => {
-    setAuthState(defaultAuthState);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    clearAuth();
+
+    setAuthState({
+      isAuthenticated: false,
+      username: null,
+      role: null,
+      token: null,
+      isLoading: false,
+    });
   };
 
   const value = useMemo(
     () => ({
-      authState,
+      ...authState,
       login,
       logout,
+      isAdmin: authState.role === "ADMIN",
+      isUser: authState.role === "USER",
     }),
     [authState]
   );
@@ -57,5 +90,11 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("A useAuth csak AuthProvideren belül használható.");
+  }
+
+  return context;
 }

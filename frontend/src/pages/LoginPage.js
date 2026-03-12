@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AuthLayout from "../layouts/AuthLayout";
-import { loginUser } from "../services/authService";
+import { loginRequest } from "../services/authService";
 import { useAuth } from "../services/AuthContext";
 import "../styles/auth.css";
 
@@ -14,8 +13,8 @@ function LoginPage() {
     password: "",
   });
 
-  const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event) => {
@@ -26,111 +25,84 @@ function LoginPage() {
       [name]: value,
     }));
 
-    setErrors((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
-
+    setError("");
     setMessage("");
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.username.trim()) {
-      newErrors.username = "A felhasználónév megadása kötelező.";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "A jelszó megadása kötelező.";
-    }
-
-    return newErrors;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const validationErrors = validateForm();
-
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      setMessage("");
-      return;
-    }
-
-    setErrors({});
     setIsSubmitting(true);
+    setError("");
+    setMessage("");
 
     try {
-      const result = await loginUser(formData);
-
-      const resolvedRole =
-        formData.username.toLowerCase() === "admin" ? "ADMIN" : "USER";
-
-      login({
+      const response = await loginRequest({
         username: formData.username,
-        role: resolvedRole,
+        password: formData.password,
       });
 
-      setMessage(result.message);
+      login({
+        username: response.username,
+        role: response.role,
+        token: response.token,
+      });
 
-      if (resolvedRole === "ADMIN") {
+      setMessage("Sikeres bejelentkezés.");
+
+      if (String(response.role).toUpperCase() === "ADMIN") {
         navigate("/dashboard/admin");
-      } else {
-        navigate("/dashboard/user");
+        return;
       }
-    } catch (error) {
-      setMessage("Váratlan hiba történt a bejelentkezési folyamat során.");
+
+      navigate("/dashboard/user");
+    } catch (err) {
+      setError(err.message || "Sikertelen bejelentkezés.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <AuthLayout title="Bejelentkezés">
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <div className="auth-form-group">
-          <label htmlFor="username">Felhasználónév</label>
-          <input
-            id="username"
-            name="username"
-            type="text"
-            placeholder="Add meg a felhasználóneved"
-            value={formData.username}
-            onChange={handleChange}
-          />
-          {errors.username && <p className="auth-error">{errors.username}</p>}
-        </div>
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2>Bejelentkezés</h2>
+        <p>Jelentkezz be a 112 operátori szimulációs rendszerbe.</p>
 
-        <div className="auth-form-group">
-          <label htmlFor="password">Jelszó</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Add meg a jelszavad"
-            value={formData.password}
-            onChange={handleChange}
-          />
-          {errors.password && <p className="auth-error">{errors.password}</p>}
-        </div>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="auth-form-group">
+            <label htmlFor="username">Felhasználónév</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              placeholder="Add meg a felhasználónevet"
+              value={formData.username}
+              onChange={handleChange}
+            />
+          </div>
 
-        <p className="auth-helper-text">
-          A belépés később JWT alapú hitelesítéssel fog működni.
-        </p>
+          <div className="auth-form-group">
+            <label htmlFor="password">Jelszó</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Add meg a jelszót"
+              value={formData.password}
+              onChange={handleChange}
+            />
+          </div>
 
-        {message && <p className="auth-success">{message}</p>}
+          {error && <p className="auth-error">{error}</p>}
+          {message && <div className="form-message">{message}</div>}
 
-        <button
-          type="submit"
-          className="auth-form-button"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Folyamatban..." : "Bejelentkezés"}
-        </button>
-      </form>
-    </AuthLayout>
+          <button type="submit" className="auth-form-button" disabled={isSubmitting}>
+            {isSubmitting ? "Bejelentkezés..." : "Bejelentkezés"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
 

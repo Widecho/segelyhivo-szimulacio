@@ -1,47 +1,76 @@
-import DashboardCard from "../components/DashboardCard";
+import { Link } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
+import DashboardCard from "../components/DashboardCard";
+
+function dashboardLinkStyle() {
+  return {
+    display: "inline-block",
+    padding: "10px 14px",
+    backgroundColor: "#1f3c88",
+    color: "#ffffff",
+    textDecoration: "none",
+    borderRadius: "8px",
+    fontWeight: 600,
+  };
+}
 
 function AdminDashboardPage() {
-  const { authState } = useAuth();
+  const { username } = useAuth();
 
   return (
     <div>
       <h2>Admin irányítópult</h2>
       <p>
-        Üdv, <strong>{authState.username}</strong>! Itt fogod kezelni a
-        felhasználókat, a szituációkat és a kiértékelések áttekintését.
+        Üdv, <strong>{username}</strong>! Itt kezelheted a felhasználókat,
+        szituációkat és eredményeket.
       </p>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
           gap: "16px",
           marginTop: "24px",
         }}
       >
         <DashboardCard
-          title="Új szituáció létrehozása"
-          description="Itt lesz lehetőség új hanganyaggal és elvárt kitöltéssel rendelkező szituáció létrehozására."
-          to="/admin/scenarios/new"
-        />
-
-        <DashboardCard
-          title="Szituációk kezelése"
-          description="Itt lehet majd a meglévő szituációkat listázni, megnyitni és szerkeszteni."
-          to="/admin/scenarios"
-        />
-
-        <DashboardCard
-          title="Felhasználói eredmények"
-          description="Itt lesz áttekinthető az összes felhasználó teljesítménye és a korábbi próbálkozások eredménye."
-          to="/admin/results"
-        />
-
-        <DashboardCard
           title="Felhasználók kezelése"
-          description="Itt fog az admin jelszót visszaállítani, illetve később a felhasználói adatokkal kapcsolatos műveleteket végezni."
-          to="/admin/users"
+          description="A rendszerben szereplő felhasználók áttekintése."
+          footer={
+            <Link to="/admin/users" style={dashboardLinkStyle()}>
+              Megnyitás
+            </Link>
+          }
+        />
+
+        <DashboardCard
+          title="Szituációk"
+          description="A meglévő szituációk listázása és kezelése."
+          footer={
+            <Link to="/admin/scenarios" style={dashboardLinkStyle()}>
+              Megnyitás
+            </Link>
+          }
+        />
+
+        <DashboardCard
+          title="Új szituáció"
+          description="Új szituáció létrehozása adminisztrátorként."
+          footer={
+            <Link to="/admin/scenarios/new" style={dashboardLinkStyle()}>
+              Megnyitás
+            </Link>
+          }
+        />
+
+        <DashboardCard
+          title="Eredmények"
+          description="A felhasználók teljesítményeinek áttekintése."
+          footer={
+            <Link to="/admin/results" style={dashboardLinkStyle()}>
+              Megnyitás
+            </Link>
+          }
         />
       </div>
     </div>
