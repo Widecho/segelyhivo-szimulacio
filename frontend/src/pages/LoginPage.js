@@ -1,9 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AuthLayout from "../layouts/AuthLayout";
 import { loginUser } from "../services/authService";
+import { useAuth } from "../services/AuthContext";
 import "../styles/auth.css";
 
 function LoginPage() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -59,7 +64,14 @@ function LoginPage() {
 
     try {
       const result = await loginUser(formData);
+
+      login({
+        username: formData.username,
+        role: formData.username.toLowerCase() === "admin" ? "ADMIN" : "USER",
+      });
+
       setMessage(result.message);
+      navigate("/");
     } catch (error) {
       setMessage("Váratlan hiba történt a bejelentkezési folyamat során.");
     } finally {
