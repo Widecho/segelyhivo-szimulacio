@@ -4,6 +4,13 @@ import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import mockScenarios from "../utils/mockScenarios";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
 import { loadLatestCustomScenario } from "../utils/scenarioStorage";
+import SimulationHeader from "../components/simulation/SimulationHeader";
+import SimulationCallPanel from "../components/simulation/SimulationCallPanel";
+import SimulationFormPanel from "../components/simulation/SimulationFormPanel";
+import SimulationUnitsPanel from "../components/simulation/SimulationUnitsPanel";
+import SimulationEvaluationPanel from "../components/simulation/SimulationEvaluationPanel";
+import SimulationStatusPanel from "../components/simulation/SimulationStatusPanel";
+import SimulationMapPanel from "../components/simulation/SimulationMapPanel";
 import "../styles/auth.css";
 import "../styles/simulation.css";
 
@@ -20,13 +27,16 @@ function UserSimulationPage() {
     return mockScenarios[0];
   }, []);
 
-  const initialFormData = {
-    callerName: "",
-    callerPhone: "",
-    location: activeScenario?.address || "",
-    eventDescription: activeScenario?.title || "",
-    note: "",
-  };
+  const initialFormData = useMemo(
+    () => ({
+      callerName: "",
+      callerPhone: "",
+      location: activeScenario?.address || "",
+      eventDescription: activeScenario?.title || "",
+      note: "",
+    }),
+    [activeScenario]
+  );
 
   const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
   const [callState, setCallState] = useState("IDLE");
@@ -42,24 +52,29 @@ function UserSimulationPage() {
     "Heves VMRFK",
   ];
 
-  const handleSetAvailable = () => {
-    setAvailabilityStatus("AVAILABLE");
-    setCallState("WAITING");
+  const availabilityLabel =
+    availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
+
+  const matchedUnits = selectedUnits.filter((unit) => expectedUnits.includes(unit));
+  const missingUnits = expectedUnits.filter((unit) => !selectedUnits.includes(unit));
+  const incorrectUnits = selectedUnits.filter((unit) => !expectedUnits.includes(unit));
+
+  const resetSimulationState = (availability = "NOT_READY", call = "IDLE") => {
+    setAvailabilityStatus(availability);
+    setCallState(call);
     setSimulationStep("FORM");
-    setMessage("");
-    setSelectedUnits([]);
     setFormData(initialFormData);
+    setSelectedUnits([]);
     setErrors({});
+    setMessage("");
+  };
+
+  const handleSetAvailable = () => {
+    resetSimulationState("AVAILABLE", "WAITING");
   };
 
   const handleSetUnavailable = () => {
-    setAvailabilityStatus("NOT_READY");
-    setCallState("IDLE");
-    setSimulationStep("FORM");
-    setMessage("");
-    setErrors({});
-    setSelectedUnits([]);
-    setFormData(initialFormData);
+    resetSimulationState("NOT_READY", "IDLE");
   };
 
   const handleMockIncomingCall = () => {
@@ -84,6 +99,7 @@ function UserSimulationPage() {
     setErrors((prev) => ({
       ...prev,
       [name]: "",
+      selectedUnits: "",
     }));
 
     setMessage("");
@@ -164,11 +180,6 @@ function UserSimulationPage() {
       return;
     }
 
-    setErrors((prev) => ({
-      ...prev,
-      selectedUnits: "",
-    }));
-
     const matchedUnitsLocal = selectedUnits.filter((unit) =>
       expectedUnits.includes(unit)
     );
@@ -203,427 +214,120 @@ function UserSimulationPage() {
     };
 
     saveLatestSimulationResult(resultPayload);
-
+    setErrors((prev) => ({
+      ...prev,
+      selectedUnits: "",
+    }));
     setMessage("");
     setSimulationStep("EVALUATION");
   };
 
   const handleRestartSimulation = () => {
-    setAvailabilityStatus("NOT_READY");
-    setCallState("IDLE");
-    setSimulationStep("FORM");
-    setFormData(initialFormData);
-    setSelectedUnits([]);
-    setErrors({});
-    setMessage("");
+    resetSimulationState("NOT_READY", "IDLE");
   };
 
   const handleBackToDashboard = () => {
     navigate("/dashboard/user");
   };
 
-  const availabilityLabel =
-    availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
+  const renderStageContent = () => {
+    if (callState !== "ACCEPTED") {
+      return (
+        <p className="simulation-note">
+          Az adatlap a hívás fogadása után válik aktívvá.
+        </p>
+      );
+    }
 
-  const callStateLabelMap = {
-    IDLE: "Nincs aktív várakozás",
-    WAITING: "Várakozás bejövő hívásra",
-    RINGING: "Bejövő hívás",
-    ACCEPTED: "Hívás fogadva",
+    if (simulationStep === "FORM") {
+      return (
+        <SimulationFormPanel
+          formData={formData}
+          errors={errors}
+          onChange={handleChange}
+          onSubmit={handleSubmitSimulation}
+        />
+      );
+    }
+
+    if (simulationStep === "UNITS") {
+      return (
+        <SimulationUnitsPanel
+          units={mockEmergencyUnits}
+          selectedUnits={selectedUnits}
+          onToggleUnit={handleUnitToggle}
+          onSubmitUnits={handleSubmitUnits}
+          error={errors.selectedUnits}
+        />
+      );
+    }
+
+    return (
+      <SimulationEvaluationPanel
+        matchedUnits={matchedUnits}
+        missingUnits={missingUnits}
+        incorrectUnits={incorrectUnits}
+        onRestart={handleRestartSimulation}
+        onBackToDashboard={handleBackToDashboard}
+      />
+    );
   };
 
-  const matchedUnits = selectedUnits.filter((unit) => expectedUnits.includes(unit));
-  const missingUnits = expectedUnits.filter((unit) => !selectedUnits.includes(unit));
-  const incorrectUnits = selectedUnits.filter((unit) => !expectedUnits.includes(unit));
+  const getStageTitle = () => {
+    if (simulationStep === "FORM") {
+      return "Bejelentési adatlap";
+    }
 
-  const renderUnitColumn = (title, units, className) => (
-    <div className={`simulation-unit-column ${className}`}>
-      <h4>{title}</h4>
+    if (simulationStep === "UNITS") {
+      return "Készenléti szervek kiválasztása";
+    }
 
-      <div className="simulation-unit-list">
-        {units.map((unit) => (
-          <label key={unit} className="simulation-unit-item">
-            <input
-              type="checkbox"
-              checked={selectedUnits.includes(unit)}
-              onChange={() => handleUnitToggle(unit)}
-            />
-            <span>{unit}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
+    return "Kiértékelés";
+  };
 
   return (
-    <div className="simulation-page">
-      <div className="simulation-topbar">
-        <div>
-          <h2 className="simulation-topbar-title">112 Operátori felület</h2>
-          <p className="simulation-topbar-subtitle">
-            Szimulációs híváskezelés és adatlapkitöltés
-          </p>
-        </div>
+    <div className="simulation-shell">
+      <SimulationHeader
+        availabilityLabel={availabilityLabel}
+        isAvailable={availabilityStatus === "AVAILABLE"}
+        scenarioTitle={activeScenario?.title || "Mock szituáció"}
+      />
 
-        <div
-          className={`simulation-status-badge ${
-            availabilityStatus === "AVAILABLE" ? "available" : "busy"
-          }`}
-        >
-          Operátori státusz: {availabilityLabel}
-        </div>
-      </div>
+      <div className="simulation-main-grid">
+        <div className="simulation-left-column">
+          <SimulationCallPanel
+            activeScenario={activeScenario}
+            expectedUnits={expectedUnits}
+            callState={callState}
+            onSetAvailable={handleSetAvailable}
+            onSetUnavailable={handleSetUnavailable}
+            onMockIncomingCall={handleMockIncomingCall}
+            onAcceptCall={handleAcceptCall}
+          />
 
-      <div className="simulation-layout">
-        <div>
-          <div className="simulation-panel">
-            <h3>Híváskezelés</h3>
+          <div className="simulation-panel simulation-stage-panel">
+            <h3>{getStageTitle()}</h3>
 
-            <div className="simulation-highlight" style={{ marginBottom: "16px" }}>
-              <p>
-                <strong>Aktív mock szituáció:</strong> {activeScenario?.title}
-              </p>
-              <p style={{ marginTop: "8px" }}>
-                <strong>Szituációazonosító:</strong> {activeScenario?.id}
-              </p>
-              <p style={{ marginTop: "8px" }}>
-                <strong>Elvárt egységek:</strong> {expectedUnits.join(", ")}
-              </p>
+            <div className="simulation-stage-content">
+              {renderStageContent()}
+
+              {message && <div className="form-message">{message}</div>}
             </div>
-
-            <div className="simulation-action-row" style={{ marginBottom: "16px" }}>
-              <button
-                type="button"
-                className="admin-action-button"
-                onClick={handleSetAvailable}
-              >
-                Szabad állapot
-              </button>
-
-              <button
-                type="button"
-                className="admin-action-button"
-                onClick={handleSetUnavailable}
-              >
-                Nem szabad állapot
-              </button>
-            </div>
-
-            <div
-              className={`simulation-call-box ${
-                callState === "RINGING"
-                  ? "ringing"
-                  : callState === "ACCEPTED"
-                  ? "accepted"
-                  : ""
-              }`}
-            >
-              {callState === "IDLE" && (
-                <p className="simulation-note">
-                  A felhasználó jelenleg nem vár bejövő hívásra.
-                </p>
-              )}
-
-              {callState === "WAITING" && (
-                <>
-                  <p className="simulation-note">
-                    A felhasználó szabad állapotban van. Itt később random idő után
-                    fog megérkezni a szituációhoz tartozó hívás.
-                  </p>
-
-                  <div style={{ marginTop: "14px" }}>
-                    <button
-                      type="button"
-                      className="admin-action-button"
-                      onClick={handleMockIncomingCall}
-                    >
-                      Mock bejövő hívás
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {callState === "RINGING" && (
-                <>
-                  <p className="simulation-note">
-                    Bejövő hívás érkezett. Itt később csörgés, hanganyag és
-                    időzített szituációindítás fog történni.
-                  </p>
-
-                  <div style={{ marginTop: "14px" }}>
-                    <button
-                      type="button"
-                      className="admin-action-button"
-                      onClick={handleAcceptCall}
-                    >
-                      Hívás fogadása
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {callState === "ACCEPTED" && (
-                <p className="simulation-note">
-                  A hívás fogadva lett. Töltsd ki a híváskezelési adatlapot, majd
-                  válaszd ki a szükséges készenléti szerveket.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="simulation-panel">
-            <h3>
-              {simulationStep === "FORM" && "Bejelentési adatlap"}
-              {simulationStep === "UNITS" && "Készenléti szervek kiválasztása"}
-              {simulationStep === "EVALUATION" && "Kiértékelés"}
-            </h3>
-
-            {callState !== "ACCEPTED" ? (
-              <p className="simulation-note">
-                Az adatlap a hívás fogadása után válik aktívvá.
-              </p>
-            ) : simulationStep === "FORM" ? (
-              <form className="auth-form" onSubmit={handleSubmitSimulation}>
-                <div className="auth-form-group">
-                  <label htmlFor="callerName">Bejelentő neve</label>
-                  <input
-                    id="callerName"
-                    name="callerName"
-                    type="text"
-                    placeholder="Add meg a bejelentő nevét"
-                    value={formData.callerName}
-                    onChange={handleChange}
-                  />
-                  {errors.callerName && (
-                    <p className="auth-error">{errors.callerName}</p>
-                  )}
-                </div>
-
-                <div className="auth-form-group">
-                  <label htmlFor="callerPhone">Telefonszám</label>
-                  <input
-                    id="callerPhone"
-                    name="callerPhone"
-                    type="text"
-                    placeholder="Add meg a telefonszámot"
-                    value={formData.callerPhone}
-                    onChange={handleChange}
-                  />
-                  {errors.callerPhone && (
-                    <p className="auth-error">{errors.callerPhone}</p>
-                  )}
-                </div>
-
-                <div className="auth-form-group">
-                  <label htmlFor="location">Helyszín</label>
-                  <input
-                    id="location"
-                    name="location"
-                    type="text"
-                    placeholder="Add meg a helyszínt"
-                    value={formData.location}
-                    onChange={handleChange}
-                  />
-                  {errors.location && (
-                    <p className="auth-error">{errors.location}</p>
-                  )}
-                </div>
-
-                <div className="auth-form-group">
-                  <label htmlFor="eventDescription">Esemény leírása</label>
-                  <input
-                    id="eventDescription"
-                    name="eventDescription"
-                    type="text"
-                    placeholder="Röviden írd le az eseményt"
-                    value={formData.eventDescription}
-                    onChange={handleChange}
-                  />
-                  {errors.eventDescription && (
-                    <p className="auth-error">{errors.eventDescription}</p>
-                  )}
-                </div>
-
-                <div className="auth-form-group">
-                  <label htmlFor="note">Jegyzet</label>
-                  <textarea
-                    id="note"
-                    name="note"
-                    rows="6"
-                    placeholder="Írd le a hívás lényegét"
-                    value={formData.note}
-                    onChange={handleChange}
-                    style={{ resize: "vertical" }}
-                  />
-                  {errors.note && <p className="auth-error">{errors.note}</p>}
-                </div>
-
-                <button type="submit" className="auth-form-button">
-                  Adatlap beküldése
-                </button>
-              </form>
-            ) : simulationStep === "UNITS" ? (
-              <>
-                <p className="simulation-note">
-                  Válaszd ki a szükséges készenléti szerveket. Összesen legfeljebb
-                  három egység jelölhető ki.
-                </p>
-
-                <div className="simulation-unit-columns">
-                  {renderUnitColumn("Tűzoltóság", mockEmergencyUnits.fire, "fire")}
-                  {renderUnitColumn(
-                    "Mentőszolgálat",
-                    mockEmergencyUnits.ambulance,
-                    "ambulance"
-                  )}
-                  {renderUnitColumn("Rendőrség", mockEmergencyUnits.police, "police")}
-                </div>
-
-                {errors.selectedUnits && (
-                  <p className="auth-error" style={{ marginTop: "12px" }}>
-                    {errors.selectedUnits}
-                  </p>
-                )}
-
-                <div className="simulation-submit-box">
-                  <button
-                    type="button"
-                    className="auth-form-button"
-                    onClick={handleSubmitUnits}
-                  >
-                    Készenléti szervek beküldése
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="simulation-evaluation-box">
-                <div className="simulation-evaluation-section">
-                  <h4>Mi sikerült jól</h4>
-                  <ul className="simulation-evaluation-list success">
-                    <li>A híváskezelési folyamat végig lett vezetve.</li>
-                    <li>A kötelező mezők kitöltése megtörtént.</li>
-                    <li>
-                      Helyesen kijelölt egységek:{" "}
-                      {matchedUnits.length > 0 ? matchedUnits.join(", ") : "nincs egyezés"}
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="simulation-evaluation-section">
-                  <h4>Mi hibás vagy hiányos</h4>
-                  <ul className="simulation-evaluation-list error">
-                    <li>
-                      Hiányzó elvárt egységek:{" "}
-                      {missingUnits.length > 0 ? missingUnits.join(", ") : "nincs hiányzó egység"}
-                    </li>
-                    <li>
-                      Nem elvárt kijelölt egységek:{" "}
-                      {incorrectUnits.length > 0
-                        ? incorrectUnits.join(", ")
-                        : "nincs hibás kijelölés"}
-                    </li>
-                    <li>
-                      A jegyzet tartalmi ellenőrzése később AI támogatással fog történni.
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="simulation-evaluation-section">
-                  <h4>Összegzés</h4>
-                  <p className="simulation-note">
-                    Mock kiértékelés elkészült. A végleges rendszerben itt fog
-                    megjelenni a részletes visszajelzés és a tárolt eredmény.
-                  </p>
-                </div>
-
-                <div className="simulation-finish-actions">
-                  <button
-                    type="button"
-                    className="auth-form-button"
-                    onClick={handleRestartSimulation}
-                  >
-                    Új szimuláció indítása
-                  </button>
-
-                  <button
-                    type="button"
-                    className="admin-action-button"
-                    onClick={handleBackToDashboard}
-                  >
-                    Vissza az irányítópultra
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {message && <div className="form-message">{message}</div>}
           </div>
         </div>
 
-        <div className="simulation-side-stack">
-          <div className="simulation-panel">
-            <h3>Aktuális állapot</h3>
+        <div className="simulation-right-column">
+          <SimulationStatusPanel
+            availabilityLabel={availabilityLabel}
+            callState={callState}
+            simulationStep={simulationStep}
+            activeScenarioId={activeScenario?.id || "Mock szituáció"}
+          />
 
-            <div className="simulation-info-grid">
-              <div className="simulation-info-card">
-                <p className="simulation-info-label">Operátor</p>
-                <p className="simulation-info-value">{availabilityLabel}</p>
-              </div>
-
-              <div className="simulation-info-card">
-                <p className="simulation-info-label">Hívás</p>
-                <p className="simulation-info-value">{callStateLabelMap[callState]}</p>
-              </div>
-
-              <div className="simulation-info-card">
-                <p className="simulation-info-label">Forrás</p>
-                <p className="simulation-info-value">
-                  {activeScenario?.id || "Mock szituáció"}
-                </p>
-              </div>
-
-              <div className="simulation-info-card">
-                <p className="simulation-info-label">Lépés</p>
-                <p className="simulation-info-value">
-                  {simulationStep === "FORM" && "Adatlap"}
-                  {simulationStep === "UNITS" && "Egységkijelölés"}
-                  {simulationStep === "EVALUATION" && "Kiértékelés"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="simulation-panel">
-            <h3>Helyszín és térkép</h3>
-
-            <div className="simulation-map-card">
-              <div className="simulation-map-meta">
-                <p>
-                  <strong>Megadott helyszín:</strong>{" "}
-                  {formData.location.trim() ? formData.location : "Még nincs megadva"}
-                </p>
-
-                <p>
-                  <strong>Térképi állapot:</strong> A tényleges térképintegráció későbbi
-                  lépésben kerül ide, a jobb alsó panelbe.
-                </p>
-              </div>
-
-              <div className="simulation-map-placeholder">
-                {formData.location.trim()
-                  ? `Térkép helye – a megadott címhez tartozó nézet később itt fog megjelenni:
-${formData.location}`
-                  : "Térkép helye – a helyszín megadása után itt fog megjelenni a címhez tartozó térképi nézet."}
-              </div>
-
-              <div className="simulation-highlight">
-                <p>
-                  <strong>Kiválasztott egységek:</strong>{" "}
-                  {selectedUnits.length > 0 ? selectedUnits.join(", ") : "Még nincs kijelölés"}
-                </p>
-              </div>
-            </div>
-          </div>
+          <SimulationMapPanel
+            location={formData.location}
+            selectedUnits={selectedUnits}
+          />
         </div>
       </div>
     </div>
