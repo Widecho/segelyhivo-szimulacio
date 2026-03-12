@@ -230,3 +230,36 @@
     grid-template-columns: 1fr;
   }
 }
+.simulation-evaluation-box {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  border: 1px solid #d7dde4;
+}
+
+.simulation-evaluation-section + .simulation-evaluation-section {
+  margin-top: 18px;
+}
+
+.simulation-evaluation-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.simulation-evaluation-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.simulation-evaluation-list li + li {
+  margin-top: 6px;
+}
+
+.simulation-evaluation-list.success li {
+  color: #246b3d;
+}
+
+.simulation-evaluation-list.error li {
+  color: #8a2f2f;
+}

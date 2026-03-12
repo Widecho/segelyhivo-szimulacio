@@ -18,11 +18,14 @@ function UserSimulationPage() {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
 
+  const expectedUnits = ["Heves VMKI", "OMSZ Heves", "Heves VMRFK"];
+
   const handleSetAvailable = () => {
     setAvailabilityStatus("AVAILABLE");
     setCallState("WAITING");
     setSimulationStep("FORM");
     setMessage("");
+    setSelectedUnits([]);
   };
 
   const handleSetUnavailable = () => {
@@ -141,9 +144,8 @@ function UserSimulationPage() {
       selectedUnits: "",
     }));
 
-    setMessage(
-      `Mock beküldés sikeres. Kiválasztott egységek: ${selectedUnits.join(", ")}`
-    );
+    setMessage("");
+    setSimulationStep("EVALUATION");
   };
 
   const availabilityLabel =
@@ -155,6 +157,10 @@ function UserSimulationPage() {
     RINGING: "Bejövő hívás",
     ACCEPTED: "Hívás fogadva",
   };
+
+  const matchedUnits = selectedUnits.filter((unit) => expectedUnits.includes(unit));
+  const missingUnits = expectedUnits.filter((unit) => !selectedUnits.includes(unit));
+  const incorrectUnits = selectedUnits.filter((unit) => !expectedUnits.includes(unit));
 
   const renderUnitColumn = (title, units, className) => (
     <div className={`simulation-unit-column ${className}`}>
@@ -281,9 +287,9 @@ function UserSimulationPage() {
 
           <div className="simulation-panel">
             <h3>
-              {simulationStep === "FORM"
-                ? "Bejelentési adatlap"
-                : "Készenléti szervek kiválasztása"}
+              {simulationStep === "FORM" && "Bejelentési adatlap"}
+              {simulationStep === "UNITS" && "Készenléti szervek kiválasztása"}
+              {simulationStep === "EVALUATION" && "Kiértékelés"}
             </h3>
 
             {callState !== "ACCEPTED" ? (
@@ -370,7 +376,7 @@ function UserSimulationPage() {
                   Adatlap beküldése
                 </button>
               </form>
-            ) : (
+            ) : simulationStep === "UNITS" ? (
               <>
                 <p className="simulation-note">
                   Válaszd ki a szükséges készenléti szerveket. Összesen legfeljebb
@@ -403,6 +409,47 @@ function UserSimulationPage() {
                   </button>
                 </div>
               </>
+            ) : (
+              <div className="simulation-evaluation-box">
+                <div className="simulation-evaluation-section">
+                  <h4>Mi sikerült jól</h4>
+                  <ul className="simulation-evaluation-list success">
+                    <li>A híváskezelési folyamat végig lett vezetve.</li>
+                    <li>A kötelező mezők kitöltése megtörtént.</li>
+                    <li>
+                      Helyesen kijelölt egységek:{" "}
+                      {matchedUnits.length > 0 ? matchedUnits.join(", ") : "nincs egyezés"}
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="simulation-evaluation-section">
+                  <h4>Mi hibás vagy hiányos</h4>
+                  <ul className="simulation-evaluation-list error">
+                    <li>
+                      Hiányzó elvárt egységek:{" "}
+                      {missingUnits.length > 0 ? missingUnits.join(", ") : "nincs hiányzó egység"}
+                    </li>
+                    <li>
+                      Nem elvárt kijelölt egységek:{" "}
+                      {incorrectUnits.length > 0
+                        ? incorrectUnits.join(", ")
+                        : "nincs hibás kijelölés"}
+                    </li>
+                    <li>
+                      A jegyzet tartalmi ellenőrzése később AI támogatással fog történni.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="simulation-evaluation-section">
+                  <h4>Összegzés</h4>
+                  <p className="simulation-note">
+                    Mock kiértékelés elkészült. A végleges rendszerben itt fog
+                    megjelenni a részletes visszajelzés és a tárolt eredmény.
+                  </p>
+                </div>
+              </div>
             )}
 
             {message && <div className="form-message">{message}</div>}
@@ -432,7 +479,9 @@ function UserSimulationPage() {
               <div className="simulation-info-card">
                 <p className="simulation-info-label">Lépés</p>
                 <p className="simulation-info-value">
-                  {simulationStep === "FORM" ? "Adatlap" : "Egységkijelölés"}
+                  {simulationStep === "FORM" && "Adatlap"}
+                  {simulationStep === "UNITS" && "Egységkijelölés"}
+                  {simulationStep === "EVALUATION" && "Kiértékelés"}
                 </p>
               </div>
             </div>
