@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import InfoCard from "../components/InfoCard";
 import mockScenarios from "../utils/mockScenarios";
-import { loadCustomScenarios } from "../utils/scenarioStorage";
+import {
+  deleteCustomScenarioById,
+  loadCustomScenarios,
+} from "../utils/scenarioStorage";
 import "../styles/auth.css";
 
 function AdminScenariosPage() {
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [message, setMessage] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const customScenarios = loadCustomScenarios();
+  const customScenarios = useMemo(() => loadCustomScenarios(), [refreshKey]);
   const allScenarios = [...customScenarios, ...mockScenarios];
 
   const handleShowDetails = (scenario) => {
@@ -20,6 +24,20 @@ function AdminScenariosPage() {
     setSelectedScenario(scenario);
     setMessage(`Mock művelet: "${scenario.title}" szerkesztése előkészítve.`);
   };
+
+  const handleDeleteScenario = (scenario) => {
+    deleteCustomScenarioById(scenario.id);
+
+    if (selectedScenario?.id === scenario.id) {
+      setSelectedScenario(null);
+    }
+
+    setMessage(`Mock művelet: "${scenario.title}" törölve lett a saját szituációk közül.`);
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const isCustomScenario = (scenarioId) =>
+    customScenarios.some((scenario) => scenario.id === scenarioId);
 
   return (
     <div>
@@ -70,35 +88,53 @@ function AdminScenariosPage() {
       )}
 
       <div style={{ marginTop: "24px" }}>
-        {allScenarios.map((scenario) => (
-          <InfoCard
-            key={scenario.id}
-            title={`${scenario.title} (${scenario.category})`}
-            footer={
-              <div className="admin-action-row">
-                <button
-                  type="button"
-                  className="admin-action-button"
-                  onClick={() => handleShowDetails(scenario)}
-                >
-                  Részletek
-                </button>
+        {allScenarios.map((scenario) => {
+          const custom = isCustomScenario(scenario.id);
 
-                <button
-                  type="button"
-                  className="admin-action-button"
-                  onClick={() => handleEditScenario(scenario)}
-                >
-                  Szerkesztés
-                </button>
-              </div>
-            }
-          >
-            <p><strong>Azonosító:</strong> {scenario.id}</p>
-            <p><strong>Hanganyag:</strong> {scenario.audioFileName}</p>
-            <p><strong>Helyszín:</strong> {scenario.address}</p>
-          </InfoCard>
-        ))}
+          return (
+            <InfoCard
+              key={scenario.id}
+              title={`${scenario.title} (${scenario.category})`}
+              footer={
+                <div className="admin-action-row">
+                  <button
+                    type="button"
+                    className="admin-action-button"
+                    onClick={() => handleShowDetails(scenario)}
+                  >
+                    Részletek
+                  </button>
+
+                  <button
+                    type="button"
+                    className="admin-action-button"
+                    onClick={() => handleEditScenario(scenario)}
+                  >
+                    Szerkesztés
+                  </button>
+
+                  {custom && (
+                    <button
+                      type="button"
+                      className="admin-action-button"
+                      onClick={() => handleDeleteScenario(scenario)}
+                    >
+                      Törlés
+                    </button>
+                  )}
+                </div>
+              }
+            >
+              <p><strong>Azonosító:</strong> {scenario.id}</p>
+              <p><strong>Hanganyag:</strong> {scenario.audioFileName}</p>
+              <p><strong>Helyszín:</strong> {scenario.address}</p>
+              <p>
+                <strong>Típus:</strong>{" "}
+                {custom ? "Saját létrehozott mock szituáció" : "Alap mock szituáció"}
+              </p>
+            </InfoCard>
+          );
+        })}
       </div>
     </div>
   );

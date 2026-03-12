@@ -24,3 +24,15 @@ export function saveCustomScenario(scenario) {
     JSON.stringify(updatedScenarios)
   );
 }
+
+export function deleteCustomScenarioById(scenarioId) {
+  const existingScenarios = loadCustomScenarios();
+  const updatedScenarios = existingScenarios.filter(
+    (scenario) => scenario.id !== scenarioId
+  );
+
+  localStorage.setItem(
+    CUSTOM_SCENARIOS_STORAGE_KEY,
+    JSON.stringify(updatedScenarios)
+  );
+}
