@@ -23,21 +23,25 @@ function AdminDashboardPage() {
         <DashboardCard
           title="Új szituáció létrehozása"
           description="Itt lesz lehetőség új hanganyaggal és elvárt kitöltéssel rendelkező szituáció létrehozására."
+          to="/admin/scenarios/new"
         />
 
         <DashboardCard
           title="Szituációk kezelése"
           description="Itt lehet majd a meglévő szituációkat listázni, megnyitni és szerkeszteni."
+          to="/admin/scenarios"
         />
 
         <DashboardCard
           title="Felhasználói eredmények"
           description="Itt lesz áttekinthető az összes felhasználó teljesítménye és a korábbi próbálkozások eredménye."
+          to="/admin/results"
         />
 
         <DashboardCard
           title="Felhasználók kezelése"
           description="Itt fog az admin jelszót visszaállítani, illetve később a felhasználói adatokkal kapcsolatos műveleteket végezni."
+          to="/admin/users"
         />
       </div>
     </div>

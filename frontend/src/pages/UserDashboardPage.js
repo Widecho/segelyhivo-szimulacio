@@ -28,11 +28,13 @@ function UserDashboardPage() {
         <DashboardCard
           title="Korábbi eredményeim"
           description="Itt fogod később visszanézni az eddig teljesített szituációkat és azok kiértékelését."
+          to="/user/results"
         />
 
         <DashboardCard
           title="Profil"
           description="Itt jelennek majd meg a saját felhasználói adataid és a hozzád tartozó statisztikák."
+          to="/profile"
         />
       </div>
     </div>
