@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import InfoCard from "../components/InfoCard";
 import mockScenarios from "../utils/mockScenarios";
+import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import {
   deleteCustomScenarioById,
   loadCustomScenarios,
@@ -17,7 +18,9 @@ function AdminScenariosPage() {
     audioFileName: "",
     address: "",
     expectedNote: "",
+    requiredUnits: [],
   });
+  const [editError, setEditError] = useState("");
   const [message, setMessage] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -30,6 +33,7 @@ function AdminScenariosPage() {
   const handleShowDetails = (scenario) => {
     setSelectedScenario(scenario);
     setEditingScenario(null);
+    setEditError("");
     setMessage("");
   };
 
@@ -37,6 +41,7 @@ function AdminScenariosPage() {
     if (!isCustomScenario(scenario.id)) {
       setSelectedScenario(scenario);
       setEditingScenario(null);
+      setEditError("");
       setMessage("Az alap mock szituációk ebben a fázisban még nem szerkeszthetők.");
       return;
     }
@@ -49,7 +54,9 @@ function AdminScenariosPage() {
       audioFileName: scenario.audioFileName,
       address: scenario.address,
       expectedNote: scenario.expectedNote,
+      requiredUnits: scenario.requiredUnits || [],
     });
+    setEditError("");
     setMessage("");
   };
 
@@ -62,6 +69,7 @@ function AdminScenariosPage() {
 
     if (editingScenario?.id === scenario.id) {
       setEditingScenario(null);
+      setEditError("");
     }
 
     setMessage(`Mock művelet: "${scenario.title}" törölve lett a saját szituációk közül.`);
@@ -77,10 +85,39 @@ function AdminScenariosPage() {
     }));
   };
 
+  const handleEditUnitToggle = (unitName) => {
+    setEditFormData((prev) => {
+      const alreadySelected = prev.requiredUnits.includes(unitName);
+
+      if (alreadySelected) {
+        return {
+          ...prev,
+          requiredUnits: prev.requiredUnits.filter((unit) => unit !== unitName),
+        };
+      }
+
+      if (prev.requiredUnits.length >= 3) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        requiredUnits: [...prev.requiredUnits, unitName],
+      };
+    });
+
+    setEditError("");
+  };
+
   const handleSaveEdit = (event) => {
     event.preventDefault();
 
     if (!editingScenario) {
+      return;
+    }
+
+    if (editFormData.requiredUnits.length < 1) {
+      setEditError("Legalább egy készenléti szerv kiválasztása kötelező.");
       return;
     }
 
@@ -91,19 +128,41 @@ function AdminScenariosPage() {
       audioFileName: editFormData.audioFileName,
       address: editFormData.address,
       expectedNote: editFormData.expectedNote,
+      requiredUnits: editFormData.requiredUnits,
     };
 
     updateCustomScenario(updatedScenario);
     setSelectedScenario(updatedScenario);
     setEditingScenario(updatedScenario);
+    setEditError("");
     setMessage(`Mock művelet: "${updatedScenario.title}" módosításai elmentve.`);
     setRefreshKey((prev) => prev + 1);
   };
 
   const handleCancelEdit = () => {
     setEditingScenario(null);
+    setEditError("");
     setMessage("A szerkesztés megszakítva.");
   };
+
+  const renderEditUnitGroup = (groupTitle, units) => (
+    <div className="form-section">
+      <h4 style={{ marginBottom: "10px" }}>{groupTitle}</h4>
+
+      <div className="checkbox-list">
+        {units.map((unit) => (
+          <label key={unit} className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={editFormData.requiredUnits.includes(unit)}
+              onChange={() => handleEditUnitToggle(unit)}
+            />
+            <span>{unit}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -223,6 +282,23 @@ function AdminScenariosPage() {
                 style={{ resize: "vertical" }}
               />
             </div>
+
+            <div className="form-section">
+              <h3 style={{ marginBottom: "8px" }}>Elvárt készenléti szervek</h3>
+              <p className="auth-helper-text">
+                Minimum 1, maximum 3 egység választható ki.
+              </p>
+            </div>
+
+            {renderEditUnitGroup("Tűzoltóság", mockEmergencyUnits.fire)}
+            {renderEditUnitGroup("Mentőszolgálat", mockEmergencyUnits.ambulance)}
+            {renderEditUnitGroup("Rendőrség", mockEmergencyUnits.police)}
+
+            {editError && (
+              <p className="auth-error" style={{ marginTop: "10px" }}>
+                {editError}
+              </p>
+            )}
 
             <div className="admin-action-row">
               <button type="submit" className="auth-form-button">
