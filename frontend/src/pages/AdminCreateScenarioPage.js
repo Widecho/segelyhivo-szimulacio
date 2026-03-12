@@ -1,13 +1,36 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
+import mockScenarioCategories from "../utils/mockScenarioCategories";
 import "../styles/auth.css";
 
+function generateScenarioCode() {
+  const now = new Date();
+
+  const year = now.getFullYear().toString();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  const datePart = `${year}${month}${day}`;
+
+  let randomPart = "";
+  for (let i = 0; i < 10; i += 1) {
+    randomPart += Math.floor(Math.random() * 10);
+  }
+
+  return `112${datePart}${randomPart}`;
+}
+
 function AdminCreateScenarioPage() {
+  const generatedScenarioCode = useMemo(() => generateScenarioCode(), []);
+
   const [formData, setFormData] = useState({
+    scenarioCode: generatedScenarioCode,
     title: "",
     category: "",
     audioFileName: "",
-    address: "",
+    geoAddress: "",
+    latitude: "",
+    longitude: "",
     expectedNote: "",
     selectedUnits: [],
   });
@@ -61,6 +84,14 @@ function AdminCreateScenarioPage() {
     setMessage("");
   };
 
+  const validateCoordinate = (value) => {
+    if (!value.trim()) {
+      return false;
+    }
+
+    return !Number.isNaN(Number(value));
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -69,15 +100,23 @@ function AdminCreateScenarioPage() {
     }
 
     if (!formData.category.trim()) {
-      newErrors.category = "A kategória megadása kötelező.";
+      newErrors.category = "A kategória kiválasztása kötelező.";
     }
 
     if (!formData.audioFileName.trim()) {
       newErrors.audioFileName = "A hanganyag nevének megadása kötelező.";
     }
 
-    if (!formData.address.trim()) {
-      newErrors.address = "A helyszín megadása kötelező.";
+    if (!formData.geoAddress.trim()) {
+      newErrors.geoAddress = "A geokódolt cím megadása kötelező.";
+    }
+
+    if (!validateCoordinate(formData.latitude)) {
+      newErrors.latitude = "A szélességi fokot számszerűen kell megadni.";
+    }
+
+    if (!validateCoordinate(formData.longitude)) {
+      newErrors.longitude = "A hosszúsági fokot számszerűen kell megadni.";
     }
 
     if (!formData.expectedNote.trim()) {
@@ -110,7 +149,7 @@ function AdminCreateScenarioPage() {
 
     setErrors({});
     setMessage(
-      `Mock mentés sikeres: "${formData.title}" szituáció rögzítése előkészítve.`
+      `Mock mentés sikeres: "${formData.title}" szituáció rögzítése előkészítve. Azonosító: ${formData.scenarioCode}`
     );
   };
 
@@ -137,8 +176,8 @@ function AdminCreateScenarioPage() {
     <div>
       <h2>Új szituáció létrehozása</h2>
       <p>
-        Itt adhatja meg az admin a szituáció alapadatait, az elvárt jegyzetet és
-        a kiválasztandó készenléti szerveket.
+        Itt adhatja meg az admin a szituáció alapadatait, az elvárt jegyzetet,
+        a helyszín adatait és a kiválasztandó készenléti szerveket.
       </p>
 
       <form
@@ -146,6 +185,17 @@ function AdminCreateScenarioPage() {
         onSubmit={handleSubmit}
         style={{ marginTop: "24px" }}
       >
+        <div className="auth-form-group">
+          <label htmlFor="scenarioCode">Generált szituációazonosító</label>
+          <input
+            id="scenarioCode"
+            name="scenarioCode"
+            type="text"
+            value={formData.scenarioCode}
+            readOnly
+          />
+        </div>
+
         <div className="auth-form-group">
           <label htmlFor="title">Szituáció címe</label>
           <input
@@ -161,14 +211,19 @@ function AdminCreateScenarioPage() {
 
         <div className="auth-form-group">
           <label htmlFor="category">Kategória</label>
-          <input
+          <select
             id="category"
             name="category"
-            type="text"
-            placeholder="Például: Tűzeset"
             value={formData.category}
             onChange={handleChange}
-          />
+          >
+            <option value="">Válassz kategóriát</option>
+            {mockScenarioCategories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
           {errors.category && <p className="auth-error">{errors.category}</p>}
         </div>
 
@@ -188,16 +243,44 @@ function AdminCreateScenarioPage() {
         </div>
 
         <div className="auth-form-group">
-          <label htmlFor="address">Helyszín / geokódolt cím</label>
+          <label htmlFor="geoAddress">Geokódolt cím</label>
           <input
-            id="address"
-            name="address"
+            id="geoAddress"
+            name="geoAddress"
             type="text"
             placeholder="Például: 3300 Eger, Kossuth Lajos utca 12."
-            value={formData.address}
+            value={formData.geoAddress}
             onChange={handleChange}
           />
-          {errors.address && <p className="auth-error">{errors.address}</p>}
+          {errors.geoAddress && (
+            <p className="auth-error">{errors.geoAddress}</p>
+          )}
+        </div>
+
+        <div className="auth-form-group">
+          <label htmlFor="latitude">Szélességi fok</label>
+          <input
+            id="latitude"
+            name="latitude"
+            type="text"
+            placeholder="Például: 47.902300"
+            value={formData.latitude}
+            onChange={handleChange}
+          />
+          {errors.latitude && <p className="auth-error">{errors.latitude}</p>}
+        </div>
+
+        <div className="auth-form-group">
+          <label htmlFor="longitude">Hosszúsági fok</label>
+          <input
+            id="longitude"
+            name="longitude"
+            type="text"
+            placeholder="Például: 20.377200"
+            value={formData.longitude}
+            onChange={handleChange}
+          />
+          {errors.longitude && <p className="auth-error">{errors.longitude}</p>}
         </div>
 
         <div className="auth-form-group">
@@ -210,10 +293,6 @@ function AdminCreateScenarioPage() {
             value={formData.expectedNote}
             onChange={handleChange}
             style={{
-              padding: "10px 12px",
-              border: "1px solid #cfcfcf",
-              borderRadius: "8px",
-              fontSize: "14px",
               resize: "vertical",
             }}
           />

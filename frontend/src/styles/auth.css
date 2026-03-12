@@ -14,14 +14,18 @@
   font-weight: 600;
 }
 
-.auth-form-group input {
+.auth-form-group input,
+.auth-form-group select,
+.auth-form-group textarea {
   padding: 10px 12px;
   border: 1px solid #cfcfcf;
   border-radius: 8px;
   font-size: 14px;
 }
 
-.auth-form-group input:focus {
+.auth-form-group input:focus,
+.auth-form-group select:focus,
+.auth-form-group textarea:focus {
   outline: none;
   border-color: #888;
 }
