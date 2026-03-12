@@ -1,11 +1,15 @@
 import { useState } from "react";
 import InfoCard from "../components/InfoCard";
 import mockScenarios from "../utils/mockScenarios";
+import { loadCustomScenarios } from "../utils/scenarioStorage";
 import "../styles/auth.css";
 
 function AdminScenariosPage() {
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [message, setMessage] = useState("");
+
+  const customScenarios = loadCustomScenarios();
+  const allScenarios = [...customScenarios, ...mockScenarios];
 
   const handleShowDetails = (scenario) => {
     setSelectedScenario(scenario);
@@ -66,7 +70,7 @@ function AdminScenariosPage() {
       )}
 
       <div style={{ marginTop: "24px" }}>
-        {mockScenarios.map((scenario) => (
+        {allScenarios.map((scenario) => (
           <InfoCard
             key={scenario.id}
             title={`${scenario.title} (${scenario.category})`}

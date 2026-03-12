@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import mockScenarioCategories from "../utils/mockScenarioCategories";
+import { saveCustomScenario } from "../utils/scenarioStorage";
 import "../styles/auth.css";
 
 function generateScenarioCode() {
@@ -21,10 +22,8 @@ function generateScenarioCode() {
 }
 
 function AdminCreateScenarioPage() {
-  const generatedScenarioCode = useMemo(() => generateScenarioCode(), []);
-
   const [formData, setFormData] = useState({
-    scenarioCode: generatedScenarioCode,
+    scenarioCode: generateScenarioCode(),
     title: "",
     category: "",
     audioFileName: "",
@@ -147,10 +146,37 @@ function AdminCreateScenarioPage() {
       return;
     }
 
+    const scenarioPayload = {
+      id: formData.scenarioCode,
+      title: formData.title,
+      audioFileName: formData.audioFileName,
+      address: formData.geoAddress,
+      expectedNote: formData.expectedNote,
+      requiredUnits: formData.selectedUnits,
+      category: formData.category,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+      createdAt: new Date().toLocaleString("hu-HU"),
+    };
+
+    saveCustomScenario(scenarioPayload);
+
     setErrors({});
     setMessage(
-      `Mock mentés sikeres: "${formData.title}" szituáció rögzítése előkészítve. Azonosító: ${formData.scenarioCode}`
+      `Mock mentés sikeres: "${formData.title}" szituáció rögzítve. Azonosító: ${formData.scenarioCode}`
     );
+
+    setFormData({
+      scenarioCode: generateScenarioCode(),
+      title: "",
+      category: "",
+      audioFileName: "",
+      geoAddress: "",
+      latitude: "",
+      longitude: "",
+      expectedNote: "",
+      selectedUnits: [],
+    });
   };
 
   const renderUnitGroup = (groupTitle, units) => (
