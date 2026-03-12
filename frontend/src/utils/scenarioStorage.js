@@ -36,3 +36,16 @@ export function deleteCustomScenarioById(scenarioId) {
     JSON.stringify(updatedScenarios)
   );
 }
+
+export function updateCustomScenario(updatedScenario) {
+  const existingScenarios = loadCustomScenarios();
+
+  const updatedScenarios = existingScenarios.map((scenario) =>
+    scenario.id === updatedScenario.id ? updatedScenario : scenario
+  );
+
+  localStorage.setItem(
+    CUSTOM_SCENARIOS_STORAGE_KEY,
+    JSON.stringify(updatedScenarios)
+  );
+}
