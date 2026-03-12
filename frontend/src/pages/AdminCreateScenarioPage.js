@@ -114,6 +114,25 @@ function AdminCreateScenarioPage() {
     );
   };
 
+  const renderUnitGroup = (groupTitle, units) => (
+    <div className="form-section">
+      <h3>{groupTitle}</h3>
+
+      <div className="checkbox-list">
+        {units.map((unit) => (
+          <label key={unit} className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={formData.selectedUnits.includes(unit)}
+              onChange={() => handleUnitToggle(unit)}
+            />
+            <span>{unit}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <h2>Új szituáció létrehozása</h2>
@@ -122,7 +141,11 @@ function AdminCreateScenarioPage() {
         a kiválasztandó készenléti szerveket.
       </p>
 
-      <form className="auth-form" onSubmit={handleSubmit} style={{ marginTop: "24px" }}>
+      <form
+        className="auth-form"
+        onSubmit={handleSubmit}
+        style={{ marginTop: "24px" }}
+      >
         <div className="auth-form-group">
           <label htmlFor="title">Szituáció címe</label>
           <input
@@ -202,28 +225,19 @@ function AdminCreateScenarioPage() {
         <div className="form-section">
           <h3>Kiválasztandó készenléti szervek</h3>
           <p className="auth-helper-text">
-            Minimum 1, maximum 3 egység választható ki.
+            Minimum 1, maximum 3 egység választható ki összesen.
           </p>
-
-          <div className="checkbox-list">
-            {mockEmergencyUnits.map((unit) => (
-              <label key={unit} className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={formData.selectedUnits.includes(unit)}
-                  onChange={() => handleUnitToggle(unit)}
-                />
-                <span>{unit}</span>
-              </label>
-            ))}
-          </div>
-
-          {errors.selectedUnits && (
-            <p className="auth-error" style={{ marginTop: "10px" }}>
-              {errors.selectedUnits}
-            </p>
-          )}
         </div>
+
+        {renderUnitGroup("Tűzoltóság", mockEmergencyUnits.fire)}
+        {renderUnitGroup("Mentőszolgálat", mockEmergencyUnits.ambulance)}
+        {renderUnitGroup("Rendőrség", mockEmergencyUnits.police)}
+
+        {errors.selectedUnits && (
+          <p className="auth-error" style={{ marginTop: "10px" }}>
+            {errors.selectedUnits}
+          </p>
+        )}
 
         {message && <div className="form-message">{message}</div>}
 
