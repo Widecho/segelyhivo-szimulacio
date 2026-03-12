@@ -12,7 +12,7 @@ VALUES
     (
         'Admin Béla',
         'admin',
-        '$2a$10$mockoltjelszohashhelyeadmin123456789012345678901234567890',
+        '$2y$10$eaWbqCJcl9jUcJkPSWd5auqzsfgP5/DunyqekyE/0OdEI7pVH0E8e',
         (SELECT id FROM role WHERE name = 'ADMIN'),
         0,
         TRUE,
@@ -22,7 +22,7 @@ VALUES
     (
         'Teszt Elek',
         'teszt.elek',
-        '$2a$10$mockoltjelszohashhelyeteszt123456789012345678901234567890',
+        '$2y$10$eaWbqCJcl9jUcJkPSWd5auqzsfgP5/DunyqekyE/0OdEI7pVH0E8e',
         (SELECT id FROM role WHERE name = 'USER'),
         0,
         TRUE,
@@ -32,7 +32,7 @@ VALUES
     (
         'Minta Anna',
         'minta.anna',
-        '$2a$10$mockoltjelszohashhelyeminta123456789012345678901234567890',
+        '$2y$10$eaWbqCJcl9jUcJkPSWd5auqzsfgP5/DunyqekyE/0OdEI7pVH0E8e',
         (SELECT id FROM role WHERE name = 'USER'),
         1,
         TRUE,

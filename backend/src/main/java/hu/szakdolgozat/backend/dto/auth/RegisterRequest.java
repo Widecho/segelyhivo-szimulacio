@@ -1,51 +1,21 @@
 package hu.szakdolgozat.backend.dto.auth;
 
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
 public class RegisterRequest {
 
+    @NotBlank(message = "A teljes név megadása kötelező.")
     private String fullName;
+
+    @NotBlank(message = "A felhasználónév megadása kötelező.")
     private String username;
+
+    @NotBlank(message = "A jelszó megadása kötelező.")
     private String password;
-    private String confirmPassword;
-
-    public RegisterRequest() {
-    }
-
-    public RegisterRequest(String fullName, String username, String password, String confirmPassword) {
-        this.fullName = fullName;
-        this.username = username;
-        this.password = password;
-        this.confirmPassword = confirmPassword;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getConfirmPassword() {
-        return confirmPassword;
-    }
-
-    public void setConfirmPassword(String confirmPassword) {
-        this.confirmPassword = confirmPassword;
-    }
 }
