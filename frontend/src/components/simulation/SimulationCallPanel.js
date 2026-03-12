@@ -1,6 +1,4 @@
 function SimulationCallPanel({
-  activeScenario,
-  expectedUnits,
   callState,
   onSetAvailable,
   onSetUnavailable,
@@ -13,10 +11,8 @@ function SimulationCallPanel({
 
       <div className="simulation-highlight">
         <p>
-          <strong>Szituációazonosító:</strong> {activeScenario?.id}
-        </p>
-        <p style={{ marginTop: "6px" }}>
-          <strong>Elvárt egységek:</strong> {expectedUnits.join(", ")}
+          A kezelői feladat során a bejövő hívás adatai alapján kell önállóan
+          rögzíteni az eseményt és kiválasztani a szükséges készenléti szerveket.
         </p>
       </div>
 
@@ -94,7 +90,8 @@ function SimulationCallPanel({
         {callState === "ACCEPTED" && (
           <p className="simulation-note">
             A hívás fogadva lett. Töltsd ki az adatlapot, majd válaszd ki a
-            szükséges készenléti szerveket.
+            szükséges készenléti szerveket a hívásban elhangzott információk
+            alapján.
           </p>
         )}
       </div>

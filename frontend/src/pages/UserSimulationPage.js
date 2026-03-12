@@ -32,7 +32,7 @@ function UserSimulationPage() {
       callerName: "",
       callerPhone: "",
       location: activeScenario?.address || "",
-      eventDescription: activeScenario?.title || "",
+      eventDescription: "",
       note: "",
     }),
     [activeScenario]
@@ -290,14 +290,12 @@ function UserSimulationPage() {
       <SimulationHeader
         availabilityLabel={availabilityLabel}
         isAvailable={availabilityStatus === "AVAILABLE"}
-        scenarioTitle={activeScenario?.title || "Mock szituáció"}
+        scenarioTitle="Bejövő segélyhívás kezelése"
       />
 
       <div className="simulation-main-grid">
         <div className="simulation-left-column">
           <SimulationCallPanel
-            activeScenario={activeScenario}
-            expectedUnits={expectedUnits}
             callState={callState}
             onSetAvailable={handleSetAvailable}
             onSetUnavailable={handleSetUnavailable}
@@ -321,7 +319,6 @@ function UserSimulationPage() {
             availabilityLabel={availabilityLabel}
             callState={callState}
             simulationStep={simulationStep}
-            activeScenarioId={activeScenario?.id || "Mock szituáció"}
           />
 
           <SimulationMapPanel

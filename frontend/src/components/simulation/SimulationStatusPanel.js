@@ -2,7 +2,6 @@ function SimulationStatusPanel({
   availabilityLabel,
   callState,
   simulationStep,
-  activeScenarioId,
 }) {
   const callStateLabelMap = {
     IDLE: "Nincs aktív várakozás",
@@ -33,8 +32,8 @@ function SimulationStatusPanel({
         </div>
 
         <div className="simulation-info-card">
-          <p className="simulation-info-label">Forrás</p>
-          <p className="simulation-info-value">{activeScenarioId}</p>
+          <p className="simulation-info-label">Mód</p>
+          <p className="simulation-info-value">Szimuláció</p>
         </div>
 
         <div className="simulation-info-card">
