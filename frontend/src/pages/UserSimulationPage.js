@@ -487,23 +487,37 @@ function UserSimulationPage() {
             </div>
           </div>
 
-          <div className="simulation-panel">
-            <h3>Operátori információk</h3>
-            <p className="simulation-note">
-              A végleges felületen itt jelenhet meg például a hívás időtartama,
-              a generált esetszám, a hanganyag állapota és a kapcsolódó
-              kiegészítő információk.
-            </p>
+<div className="simulation-panel">
+  <h3>Helyszín és térkép</h3>
 
-            <hr className="simulation-divider" />
+  <div className="simulation-map-card">
+    <div className="simulation-map-meta">
+      <p>
+        <strong>Megadott helyszín:</strong>{" "}
+        {formData.location.trim() ? formData.location : "Még nincs megadva"}
+      </p>
+
+      <p>
+        <strong>Térképi állapot:</strong> A tényleges térképintegráció későbbi
+        lépésben kerül ide, a jobb alsó panelbe.
+      </p>
+    </div>
+
+    <div className="simulation-map-placeholder">
+            {formData.location.trim()
+                ? `Térkép helye – a megadott címhez tartozó nézet később itt fog megjelenni:
+        ${formData.location}`
+                : "Térkép helye – a helyszín megadása után itt fog megjelenni a címhez tartozó térképi nézet."}
+            </div>
 
             <div className="simulation-highlight">
-              <p>
+            <p>
                 <strong>Kiválasztott egységek:</strong>{" "}
                 {selectedUnits.length > 0 ? selectedUnits.join(", ") : "Még nincs kijelölés"}
-              </p>
+            </p>
             </div>
-          </div>
+        </div>
+        </div>
         </div>
       </div>
     </div>

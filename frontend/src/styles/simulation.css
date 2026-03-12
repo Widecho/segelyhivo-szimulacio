@@ -263,3 +263,53 @@
 .simulation-evaluation-list.error li {
   color: #8a2f2f;
 }
+.simulation-map-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.simulation-map-placeholder {
+  min-height: 260px;
+  border-radius: 14px;
+  border: 1px solid #cfd8e3;
+  background:
+    linear-gradient(135deg, rgba(214, 224, 236, 0.7), rgba(240, 244, 248, 0.95)),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 24px,
+      rgba(160, 175, 190, 0.12) 24px,
+      rgba(160, 175, 190, 0.12) 25px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 24px,
+      rgba(160, 175, 190, 0.12) 24px,
+      rgba(160, 175, 190, 0.12) 25px
+    );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  text-align: center;
+  color: #334155;
+  font-weight: 600;
+}
+
+.simulation-map-meta {
+  padding: 14px;
+  border-radius: 12px;
+  background-color: #f7f9fb;
+  border: 1px solid #dfe5ea;
+}
+
+.simulation-map-meta p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.simulation-map-meta p + p {
+  margin-top: 8px;
+}
