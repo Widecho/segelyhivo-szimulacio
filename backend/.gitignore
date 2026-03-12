@@ -1,0 +1,20 @@
+# Node
+frontend/node_modules/
+frontend/build/
+
+# Java
+backend/target/
+*.class
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env és titkos adatok
+.env
+application-local.properties
