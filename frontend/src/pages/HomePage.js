@@ -2,7 +2,10 @@ function HomePage() {
   return (
     <div>
       <h2>Kezdőoldal</h2>
-      <p>Ez lesz a 112 segélyhívó szimuláció nyitó felülete.</p>
+      <p>
+        Ez a felület egy magyar 112-es segélyhívó működését szimuláló oktatási
+        alkalmazás alapja.
+      </p>
     </div>
   );
 }
