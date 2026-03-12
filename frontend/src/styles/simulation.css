@@ -172,3 +172,61 @@
     align-items: flex-start;
   }
 }
+.simulation-unit-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.simulation-unit-column {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #d7dde4;
+  background-color: #ffffff;
+}
+
+.simulation-unit-column h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.simulation-unit-column.fire {
+  background-color: #fff5f5;
+  border-color: #efcaca;
+}
+
+.simulation-unit-column.ambulance {
+  background-color: #f2fbf4;
+  border-color: #cfe7d4;
+}
+
+.simulation-unit-column.police {
+  background-color: #f2f6fc;
+  border-color: #cedbef;
+}
+
+.simulation-unit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.simulation-unit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.75);
+}
+
+.simulation-submit-box {
+  margin-top: 18px;
+}
+
+@media (max-width: 960px) {
+  .simulation-unit-columns {
+    grid-template-columns: 1fr;
+  }
+}

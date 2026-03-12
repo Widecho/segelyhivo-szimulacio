@@ -1,10 +1,12 @@
 import { useState } from "react";
+import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import "../styles/auth.css";
 import "../styles/simulation.css";
 
 function UserSimulationPage() {
   const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
   const [callState, setCallState] = useState("IDLE");
+  const [simulationStep, setSimulationStep] = useState("FORM");
   const [formData, setFormData] = useState({
     callerName: "",
     callerPhone: "",
@@ -12,20 +14,24 @@ function UserSimulationPage() {
     eventDescription: "",
     note: "",
   });
+  const [selectedUnits, setSelectedUnits] = useState([]);
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
 
   const handleSetAvailable = () => {
     setAvailabilityStatus("AVAILABLE");
     setCallState("WAITING");
+    setSimulationStep("FORM");
     setMessage("");
   };
 
   const handleSetUnavailable = () => {
     setAvailabilityStatus("NOT_READY");
     setCallState("IDLE");
+    setSimulationStep("FORM");
     setMessage("");
     setErrors({});
+    setSelectedUnits([]);
   };
 
   const handleMockIncomingCall = () => {
@@ -35,6 +41,7 @@ function UserSimulationPage() {
 
   const handleAcceptCall = () => {
     setCallState("ACCEPTED");
+    setSimulationStep("FORM");
     setMessage("");
   };
 
@@ -92,8 +99,50 @@ function UserSimulationPage() {
     }
 
     setErrors({});
+    setMessage("");
+    setSimulationStep("UNITS");
+  };
+
+  const handleUnitToggle = (unitName) => {
+    setSelectedUnits((prev) => {
+      const alreadySelected = prev.includes(unitName);
+
+      if (alreadySelected) {
+        return prev.filter((unit) => unit !== unitName);
+      }
+
+      if (prev.length >= 3) {
+        return prev;
+      }
+
+      return [...prev, unitName];
+    });
+
+    setErrors((prev) => ({
+      ...prev,
+      selectedUnits: "",
+    }));
+
+    setMessage("");
+  };
+
+  const handleSubmitUnits = () => {
+    if (selectedUnits.length < 1) {
+      setErrors((prev) => ({
+        ...prev,
+        selectedUnits: "Legalább egy készenléti szerv kiválasztása kötelező.",
+      }));
+      setMessage("");
+      return;
+    }
+
+    setErrors((prev) => ({
+      ...prev,
+      selectedUnits: "",
+    }));
+
     setMessage(
-      "Mock beküldés sikeres. A következő lépésben itt fog megjelenni a készenléti szervek kiválasztása."
+      `Mock beküldés sikeres. Kiválasztott egységek: ${selectedUnits.join(", ")}`
     );
   };
 
@@ -106,6 +155,25 @@ function UserSimulationPage() {
     RINGING: "Bejövő hívás",
     ACCEPTED: "Hívás fogadva",
   };
+
+  const renderUnitColumn = (title, units, className) => (
+    <div className={`simulation-unit-column ${className}`}>
+      <h4>{title}</h4>
+
+      <div className="simulation-unit-list">
+        {units.map((unit) => (
+          <label key={unit} className="simulation-unit-item">
+            <input
+              type="checkbox"
+              checked={selectedUnits.includes(unit)}
+              onChange={() => handleUnitToggle(unit)}
+            />
+            <span>{unit}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="simulation-page">
@@ -204,21 +272,25 @@ function UserSimulationPage() {
 
               {callState === "ACCEPTED" && (
                 <p className="simulation-note">
-                  A hívás fogadva lett. Töltsd ki a híváskezelési adatlapot az
-                  alábbi mezők segítségével.
+                  A hívás fogadva lett. Töltsd ki a híváskezelési adatlapot, majd
+                  válaszd ki a szükséges készenléti szerveket.
                 </p>
               )}
             </div>
           </div>
 
           <div className="simulation-panel">
-            <h3>Bejelentési adatlap</h3>
+            <h3>
+              {simulationStep === "FORM"
+                ? "Bejelentési adatlap"
+                : "Készenléti szervek kiválasztása"}
+            </h3>
 
             {callState !== "ACCEPTED" ? (
               <p className="simulation-note">
                 Az adatlap a hívás fogadása után válik aktívvá.
               </p>
-            ) : (
+            ) : simulationStep === "FORM" ? (
               <form className="auth-form" onSubmit={handleSubmitSimulation}>
                 <div className="auth-form-group">
                   <label htmlFor="callerName">Bejelentő neve</label>
@@ -294,13 +366,46 @@ function UserSimulationPage() {
                   {errors.note && <p className="auth-error">{errors.note}</p>}
                 </div>
 
-                {message && <div className="form-message">{message}</div>}
-
                 <button type="submit" className="auth-form-button">
                   Adatlap beküldése
                 </button>
               </form>
+            ) : (
+              <>
+                <p className="simulation-note">
+                  Válaszd ki a szükséges készenléti szerveket. Összesen legfeljebb
+                  három egység jelölhető ki.
+                </p>
+
+                <div className="simulation-unit-columns">
+                  {renderUnitColumn("Tűzoltóság", mockEmergencyUnits.fire, "fire")}
+                  {renderUnitColumn(
+                    "Mentőszolgálat",
+                    mockEmergencyUnits.ambulance,
+                    "ambulance"
+                  )}
+                  {renderUnitColumn("Rendőrség", mockEmergencyUnits.police, "police")}
+                </div>
+
+                {errors.selectedUnits && (
+                  <p className="auth-error" style={{ marginTop: "12px" }}>
+                    {errors.selectedUnits}
+                  </p>
+                )}
+
+                <div className="simulation-submit-box">
+                  <button
+                    type="button"
+                    className="auth-form-button"
+                    onClick={handleSubmitUnits}
+                  >
+                    Készenléti szervek beküldése
+                  </button>
+                </div>
+              </>
             )}
+
+            {message && <div className="form-message">{message}</div>}
           </div>
         </div>
 
@@ -325,8 +430,10 @@ function UserSimulationPage() {
               </div>
 
               <div className="simulation-info-card">
-                <p className="simulation-info-label">Mód</p>
-                <p className="simulation-info-value">Gyakorlás</p>
+                <p className="simulation-info-label">Lépés</p>
+                <p className="simulation-info-value">
+                  {simulationStep === "FORM" ? "Adatlap" : "Egységkijelölés"}
+                </p>
               </div>
             </div>
           </div>
@@ -343,8 +450,8 @@ function UserSimulationPage() {
 
             <div className="simulation-highlight">
               <p>
-                <strong>Következő lépés:</strong> az adatlap sikeres beküldése után
-                a készenléti szervek kiválasztása fog következni.
+                <strong>Kiválasztott egységek:</strong>{" "}
+                {selectedUnits.length > 0 ? selectedUnits.join(", ") : "Még nincs kijelölés"}
               </p>
             </div>
           </div>
