@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
+import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
 import "../styles/auth.css";
 import "../styles/simulation.css";
 
@@ -138,23 +139,56 @@ function UserSimulationPage() {
   };
 
   const handleSubmitUnits = () => {
-    if (selectedUnits.length < 1) {
-      setErrors((prev) => ({
-        ...prev,
-        selectedUnits: "Legalább egy készenléti szerv kiválasztása kötelező.",
-      }));
-      setMessage("");
-      return;
-    }
-
+  if (selectedUnits.length < 1) {
     setErrors((prev) => ({
       ...prev,
-      selectedUnits: "",
+      selectedUnits: "Legalább egy készenléti szerv kiválasztása kötelező.",
     }));
-
     setMessage("");
-    setSimulationStep("EVALUATION");
+    return;
+  }
+
+  setErrors((prev) => ({
+    ...prev,
+    selectedUnits: "",
+  }));
+
+  const matchedUnitsLocal = selectedUnits.filter((unit) =>
+    expectedUnits.includes(unit)
+  );
+
+  const missingUnitsLocal = expectedUnits.filter(
+    (unit) => !selectedUnits.includes(unit)
+  );
+
+  const incorrectUnitsLocal = selectedUnits.filter(
+    (unit) => !expectedUnits.includes(unit)
+  );
+
+  const score = Math.max(
+    0,
+    100 - missingUnitsLocal.length * 20 - incorrectUnitsLocal.length * 15
+  );
+
+  const resultPayload = {
+    id: `RESULT-${Date.now()}`,
+    title: formData.eventDescription || "Mock szituáció",
+    date: new Date().toLocaleString("hu-HU"),
+    location: formData.location,
+    callerName: formData.callerName,
+    selectedUnits,
+    matchedUnits: matchedUnitsLocal,
+    missingUnits: missingUnitsLocal,
+    incorrectUnits: incorrectUnitsLocal,
+    score,
+    status: score >= 80 ? "Sikeres" : score >= 50 ? "Részben sikeres" : "Sikertelen",
   };
+
+  saveLatestSimulationResult(resultPayload);
+
+  setMessage("");
+  setSimulationStep("EVALUATION");
+};
 
   const handleRestartSimulation = () => {
     setAvailabilityStatus("NOT_READY");
