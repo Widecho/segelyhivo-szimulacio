@@ -1,0 +1,15 @@
+package hu.szakdolgozat.backend.repository;
+
+import hu.szakdolgozat.backend.entity.Scenario;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface ScenarioRepository extends JpaRepository<Scenario, String> {
+
+    List<Scenario> findByIsActiveTrue();
+
+    List<Scenario> findByCategory_Name(String categoryName);
+
+    long countByIsActiveTrue();
+}
