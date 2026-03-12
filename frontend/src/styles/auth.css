@@ -46,3 +46,14 @@
   font-size: 13px;
   color: #666666;
 }
+.auth-error {
+  margin: 0;
+  font-size: 13px;
+  color: #c62828;
+}
+
+.auth-success {
+  margin: 0;
+  font-size: 13px;
+  color: #2e7d32;
+}
