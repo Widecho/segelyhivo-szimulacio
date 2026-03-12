@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import App from "./App";
 
-test("megjelenik a cim", () => {
+test("megjelenik a főcím", () => {
   render(<App />);
   const cimElem = screen.getByText(/112 Segélyhívó Szimuláció/i);
   expect(cimElem).toBeInTheDocument();
