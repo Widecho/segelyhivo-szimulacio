@@ -65,13 +65,21 @@ function LoginPage() {
     try {
       const result = await loginUser(formData);
 
+      const resolvedRole =
+        formData.username.toLowerCase() === "admin" ? "ADMIN" : "USER";
+
       login({
         username: formData.username,
-        role: formData.username.toLowerCase() === "admin" ? "ADMIN" : "USER",
+        role: resolvedRole,
       });
 
       setMessage(result.message);
-      navigate("/");
+
+      if (resolvedRole === "ADMIN") {
+        navigate("/dashboard/admin");
+      } else {
+        navigate("/dashboard/user");
+      }
     } catch (error) {
       setMessage("Váratlan hiba történt a bejelentkezési folyamat során.");
     } finally {

@@ -22,6 +22,18 @@ function Navigation() {
         </>
       )}
 
+      {authState.isAuthenticated && authState.role === "USER" && (
+        <Link to="/dashboard/user" style={{ marginRight: "16px" }}>
+          Felhasználói irányítópult
+        </Link>
+      )}
+
+      {authState.isAuthenticated && authState.role === "ADMIN" && (
+        <Link to="/dashboard/admin" style={{ marginRight: "16px" }}>
+          Admin irányítópult
+        </Link>
+      )}
+
       {authState.isAuthenticated && (
         <>
           <span style={{ marginRight: "16px" }}>
@@ -29,6 +41,7 @@ function Navigation() {
           </span>
 
           <button
+            type="button"
             onClick={logout}
             style={{
               padding: "8px 12px",
