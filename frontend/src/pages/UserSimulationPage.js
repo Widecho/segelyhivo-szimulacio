@@ -4,6 +4,7 @@ import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import mockScenarios from "../utils/mockScenarios";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
 import { loadLatestCustomScenario } from "../utils/scenarioStorage";
+import { submitSimulationAttempt } from "../services/userService";
 import SimulationHeader from "../components/simulation/SimulationHeader";
 import SimulationCallPanel from "../components/simulation/SimulationCallPanel";
 import SimulationFormPanel from "../components/simulation/SimulationFormPanel";
@@ -18,12 +19,6 @@ function UserSimulationPage() {
   const navigate = useNavigate();
 
   const activeScenario = useMemo(() => {
-    const latestCustomScenario = loadLatestCustomScenario();
-
-    if (latestCustomScenario) {
-      return latestCustomScenario;
-    }
-
     return mockScenarios[0];
   }, []);
 
@@ -45,19 +40,25 @@ function UserSimulationPage() {
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
+  const [evaluationResult, setEvaluationResult] = useState(null);
+  const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false);
 
   const expectedUnits = activeScenario?.requiredUnits || [
-    "Heves VMKI",
-    "OMSZ Heves",
-    "Heves VMRFK",
+    "Heves Tűzoltóság",
+    "Heves Mentőszolgálat",
+    "Heves Rendőrség",
   ];
 
   const availabilityLabel =
     availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
 
-  const matchedUnits = selectedUnits.filter((unit) => expectedUnits.includes(unit));
-  const missingUnits = expectedUnits.filter((unit) => !selectedUnits.includes(unit));
-  const incorrectUnits = selectedUnits.filter((unit) => !expectedUnits.includes(unit));
+  const selectedUnitNames = selectedUnits.map((unit) => unit.name);
+
+  const matchedUnits = selectedUnitNames.filter((unit) =>
+    expectedUnits.includes(unit)
+  );
+  const missingUnits = expectedUnits.filter((unit) => !selectedUnitNames.includes(unit));
+  const incorrectUnits = selectedUnitNames.filter((unit) => !expectedUnits.includes(unit));
 
   const resetSimulationState = (availability = "NOT_READY", call = "IDLE") => {
     setAvailabilityStatus(availability);
@@ -67,6 +68,8 @@ function UserSimulationPage() {
     setSelectedUnits([]);
     setErrors({});
     setMessage("");
+    setEvaluationResult(null);
+    setIsSubmittingAttempt(false);
   };
 
   const handleSetAvailable = () => {
@@ -147,19 +150,19 @@ function UserSimulationPage() {
     setSimulationStep("UNITS");
   };
 
-  const handleUnitToggle = (unitName) => {
+  const handleUnitToggle = (unit) => {
     setSelectedUnits((prev) => {
-      const alreadySelected = prev.includes(unitName);
+      const alreadySelected = prev.some((selected) => selected.id === unit.id);
 
       if (alreadySelected) {
-        return prev.filter((unit) => unit !== unitName);
+        return prev.filter((selected) => selected.id !== unit.id);
       }
 
       if (prev.length >= 3) {
         return prev;
       }
 
-      return [...prev, unitName];
+      return [...prev, unit];
     });
 
     setErrors((prev) => ({
@@ -170,7 +173,7 @@ function UserSimulationPage() {
     setMessage("");
   };
 
-  const handleSubmitUnits = () => {
+  const handleSubmitUnits = async () => {
     if (selectedUnits.length < 1) {
       setErrors((prev) => ({
         ...prev,
@@ -180,46 +183,51 @@ function UserSimulationPage() {
       return;
     }
 
-    const matchedUnitsLocal = selectedUnits.filter((unit) =>
-      expectedUnits.includes(unit)
-    );
-
-    const missingUnitsLocal = expectedUnits.filter(
-      (unit) => !selectedUnits.includes(unit)
-    );
-
-    const incorrectUnitsLocal = selectedUnits.filter(
-      (unit) => !expectedUnits.includes(unit)
-    );
-
-    const score = Math.max(
-      0,
-      100 - missingUnitsLocal.length * 20 - incorrectUnitsLocal.length * 15
-    );
-
-    const resultPayload = {
-      id: `RESULT-${Date.now()}`,
-      scenarioId: activeScenario?.id || "MOCK-SCENARIO",
-      title: formData.eventDescription || activeScenario?.title || "Mock szituáció",
-      date: new Date().toLocaleString("hu-HU"),
-      location: formData.location,
-      callerName: formData.callerName,
-      selectedUnits,
-      matchedUnits: matchedUnitsLocal,
-      missingUnits: missingUnitsLocal,
-      incorrectUnits: incorrectUnitsLocal,
-      score,
-      status:
-        score >= 80 ? "Sikeres" : score >= 50 ? "Részben sikeres" : "Sikertelen",
-    };
-
-    saveLatestSimulationResult(resultPayload);
+    setIsSubmittingAttempt(true);
+    setMessage("");
     setErrors((prev) => ({
       ...prev,
       selectedUnits: "",
     }));
-    setMessage("");
-    setSimulationStep("EVALUATION");
+
+    try {
+      const response = await submitSimulationAttempt({
+        scenarioId: activeScenario?.id,
+        callerName: formData.callerName,
+        callerPhone: formData.callerPhone,
+        locationText: formData.location,
+        eventDescription: formData.eventDescription,
+        userNote: formData.note,
+        selectedUnitIds: selectedUnits.map((unit) => unit.id),
+      });
+
+      const resultPayload = {
+        id: response.attemptId,
+        scenarioId: activeScenario?.id || "MOCK-SCENARIO",
+        title: formData.eventDescription || activeScenario?.title || "Mock szituáció",
+        date: new Date().toLocaleString("hu-HU"),
+        location: formData.location,
+        callerName: formData.callerName,
+        selectedUnits: selectedUnits.map((unit) => unit.name),
+        matchedUnits,
+        missingUnits,
+        incorrectUnits,
+        score: response.score,
+        status: response.evaluationStatus,
+      };
+
+      saveLatestSimulationResult(resultPayload);
+
+      setEvaluationResult(response);
+      setSimulationStep("EVALUATION");
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        selectedUnits: err.message || "Nem sikerült menteni a próbálkozást.",
+      }));
+    } finally {
+      setIsSubmittingAttempt(false);
+    }
   };
 
   const handleRestartSimulation = () => {
@@ -252,13 +260,19 @@ function UserSimulationPage() {
 
     if (simulationStep === "UNITS") {
       return (
-        <SimulationUnitsPanel
-          units={mockEmergencyUnits}
-          selectedUnits={selectedUnits}
-          onToggleUnit={handleUnitToggle}
-          onSubmitUnits={handleSubmitUnits}
-          error={errors.selectedUnits}
-        />
+        <>
+          <SimulationUnitsPanel
+            units={mockEmergencyUnits}
+            selectedUnits={selectedUnits}
+            onToggleUnit={handleUnitToggle}
+            onSubmitUnits={handleSubmitUnits}
+            error={errors.selectedUnits}
+          />
+
+          {isSubmittingAttempt && (
+            <p style={{ marginTop: "12px" }}>Próbálkozás mentése folyamatban...</p>
+          )}
+        </>
       );
     }
 
@@ -267,6 +281,10 @@ function UserSimulationPage() {
         matchedUnits={matchedUnits}
         missingUnits={missingUnits}
         incorrectUnits={incorrectUnits}
+        evaluationStatus={evaluationResult?.evaluationStatus}
+        score={evaluationResult?.score}
+        noteEvaluationStatus={evaluationResult?.noteEvaluationStatus}
+        evaluatorSummary={evaluationResult?.evaluatorSummary}
         onRestart={handleRestartSimulation}
         onBackToDashboard={handleBackToDashboard}
       />

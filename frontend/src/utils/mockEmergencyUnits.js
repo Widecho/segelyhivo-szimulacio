@@ -1,21 +1,18 @@
 const mockEmergencyUnits = {
   fire: [
-    "Heves VMKI",
-    "BAZ VMKI",
-    "SzSzB VMKI",
+    { id: 9, name: "Heves Tűzoltóság" },
+    { id: 4, name: "Borsod-Abaúj-Zemplén Tűzoltóság" },
+    { id: 13, name: "Pest Tűzoltóság" },
   ],
   ambulance: [
-    "OMSZ Heves",
-    "OMSZ BAZ",
-    "OMSZ SzSzB",
+    { id: 28, name: "Heves Mentőszolgálat" },
+    { id: 23, name: "Borsod-Abaúj-Zemplén Mentőszolgálat" },
+    { id: 32, name: "Pest Mentőszolgálat" },
   ],
   police: [
-    "Heves VMRFK",
-    "BAZ VMRFK",
-    "SzSzB VMRFK",
-    "Dunai Vízirendészet",
-    "Tiszai Vízirendészet",
-    "Balatoni Vízirendészet",
+    { id: 50, name: "Heves Rendőrség" },
+    { id: 45, name: "Borsod-Abaúj-Zemplén Rendőrség" },
+    { id: 54, name: "Pest Rendőrség" },
   ],
 };
 

@@ -26,7 +26,9 @@ ${location}`
         <div className="simulation-highlight">
           <p>
             <strong>Kiválasztott egységek:</strong>{" "}
-            {selectedUnits.length > 0 ? selectedUnits.join(", ") : "Még nincs kijelölés"}
+            {selectedUnits.length > 0
+              ? selectedUnits.map((unit) => unit.name).join(", ")
+              : "Még nincs kijelölés"}
           </p>
         </div>
       </div>

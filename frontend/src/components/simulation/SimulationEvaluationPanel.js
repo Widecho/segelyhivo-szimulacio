@@ -2,6 +2,10 @@ function SimulationEvaluationPanel({
   matchedUnits,
   missingUnits,
   incorrectUnits,
+  evaluationStatus,
+  score,
+  noteEvaluationStatus,
+  evaluatorSummary,
   onRestart,
   onBackToDashboard,
 }) {
@@ -33,16 +37,20 @@ function SimulationEvaluationPanel({
                 ? incorrectUnits.join(", ")
                 : "nincs hibás kijelölés"}
             </li>
-            <li>A jegyzet AI alapú ellenőrzése később kerül bekötésre.</li>
+            <li>Jegyzetellenőrzés: {noteEvaluationStatus || "N/A"}</li>
           </ul>
         </div>
       </div>
 
       <div className="simulation-highlight" style={{ marginTop: "12px" }}>
         <p>
-          <strong>Összegzés:</strong> mock kiértékelés elkészült. A végleges
-          rendszerben itt fog megjelenni a részletes visszajelzés és a tárolt
-          eredmény.
+          <strong>Értékelés:</strong> {evaluationStatus || "N/A"}
+        </p>
+        <p style={{ marginTop: "6px" }}>
+          <strong>Pontszám:</strong> {score ?? "-"}
+        </p>
+        <p style={{ marginTop: "6px" }}>
+          <strong>Összegzés:</strong> {evaluatorSummary || "Nincs összegzés."}
         </p>
       </div>
 

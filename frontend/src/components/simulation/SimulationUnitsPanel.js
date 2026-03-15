@@ -11,13 +11,13 @@ function SimulationUnitsPanel({
 
       <div className="simulation-unit-list">
         {unitList.map((unit) => (
-          <label key={unit} className="simulation-unit-item">
+          <label key={unit.id} className="simulation-unit-item">
             <input
               type="checkbox"
-              checked={selectedUnits.includes(unit)}
+              checked={selectedUnits.some((selected) => selected.id === unit.id)}
               onChange={() => onToggleUnit(unit)}
             />
-            <span>{unit}</span>
+            <span>{unit.name}</span>
           </label>
         ))}
       </div>

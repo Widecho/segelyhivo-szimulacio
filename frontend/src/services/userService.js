@@ -11,3 +11,10 @@ export async function getMyAttempts() {
     method: "GET",
   });
 }
+
+export async function submitSimulationAttempt(payload) {
+  return apiRequest("/me/attempts", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

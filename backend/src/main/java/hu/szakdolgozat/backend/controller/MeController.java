@@ -1,12 +1,18 @@
 package hu.szakdolgozat.backend.controller;
 
+import hu.szakdolgozat.backend.dto.attempt.SubmitSimulationAttemptRequest;
+import hu.szakdolgozat.backend.dto.attempt.SubmitSimulationAttemptResponse;
 import hu.szakdolgozat.backend.entity.AppUser;
 import hu.szakdolgozat.backend.entity.SimulationAttempt;
 import hu.szakdolgozat.backend.repository.AppUserRepository;
 import hu.szakdolgozat.backend.repository.SimulationAttemptRepository;
+import hu.szakdolgozat.backend.service.attempt.SimulationAttemptSubmissionService;
+import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
@@ -18,13 +24,16 @@ public class MeController {
 
     private final AppUserRepository appUserRepository;
     private final SimulationAttemptRepository simulationAttemptRepository;
+    private final SimulationAttemptSubmissionService simulationAttemptSubmissionService;
 
     public MeController(
             AppUserRepository appUserRepository,
-            SimulationAttemptRepository simulationAttemptRepository
+            SimulationAttemptRepository simulationAttemptRepository,
+            SimulationAttemptSubmissionService simulationAttemptSubmissionService
     ) {
         this.appUserRepository = appUserRepository;
         this.simulationAttemptRepository = simulationAttemptRepository;
+        this.simulationAttemptSubmissionService = simulationAttemptSubmissionService;
     }
 
     @Transactional(readOnly = true)
@@ -56,6 +65,14 @@ public class MeController {
                 .stream()
                 .map(this::mapAttempt)
                 .toList();
+    }
+
+    @PostMapping("/api/me/attempts")
+    public SubmitSimulationAttemptResponse submitMyAttempt(
+            Authentication authentication,
+            @Valid @RequestBody SubmitSimulationAttemptRequest request
+    ) {
+        return simulationAttemptSubmissionService.submit(authentication.getName(), request);
     }
 
     private Map<String, Object> mapAttempt(SimulationAttempt attempt) {
