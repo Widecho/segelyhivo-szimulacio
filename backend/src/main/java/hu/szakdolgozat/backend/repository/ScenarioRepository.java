@@ -10,6 +10,8 @@ public interface ScenarioRepository extends JpaRepository<Scenario, String> {
 
     List<Scenario> findByIsActiveTrue();
 
+    List<Scenario> findByIsActiveTrueOrderByCreatedAtDesc();
+
     List<Scenario> findByCategory_Name(String categoryName);
 
     long countByIsActiveTrue();

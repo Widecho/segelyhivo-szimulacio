@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
@@ -37,6 +37,7 @@ function UserSimulationPage() {
   const [message, setMessage] = useState("");
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false);
+  const [isReloadingScenario, setIsReloadingScenario] = useState(false);
 
   const initialFormData = useMemo(
     () => ({
@@ -51,80 +52,91 @@ function UserSimulationPage() {
 
   const [formData, setFormData] = useState(initialFormData);
 
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      location: activeScenario?.address || "",
-    }));
-  }, [activeScenario]);
+  const resetSimulationState = useCallback(
+    (availability = "NOT_READY", call = "IDLE", scenario = activeScenario) => {
+      setAvailabilityStatus(availability);
+      setCallState(call);
+      setSimulationStep("FORM");
+      setFormData({
+        callerName: "",
+        callerPhone: "",
+        location: scenario?.address || "",
+        eventDescription: "",
+        note: "",
+      });
+      setSelectedUnits([]);
+      setErrors({});
+      setMessage("");
+      setEvaluationResult(null);
+      setIsSubmittingAttempt(false);
+    },
+    [activeScenario]
+  );
+
+  const loadSimulationData = useCallback(async () => {
+    try {
+      const [scenarioResponse, unitsResponse] = await Promise.all([
+        getCurrentSimulationScenario(),
+        getSimulationUnits(),
+      ]);
+
+      const nextScenario = {
+        id: scenarioResponse.id,
+        title: scenarioResponse.title,
+        category: scenarioResponse.category,
+        address: scenarioResponse.address,
+        audioFileName: scenarioResponse.audioFileName,
+      };
+
+      const nextUnits = {
+        fire: Array.isArray(unitsResponse?.fire) ? unitsResponse.fire : [],
+        ambulance: Array.isArray(unitsResponse?.ambulance) ? unitsResponse.ambulance : [],
+        police: Array.isArray(unitsResponse?.police) ? unitsResponse.police : [],
+      };
+
+      setActiveScenario(nextScenario);
+      setAvailableUnits(nextUnits);
+      setDataLoadMessage("");
+
+      return nextScenario;
+    } catch (err) {
+      setAvailableUnits(mockEmergencyUnits);
+      setDataLoadMessage(
+        "A szituációs adatok most nem érhetők el backendről, ezért az oldal tartalék adatokkal működik."
+      );
+
+      return fallbackScenario;
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadSimulationData() {
-      try {
-        const [scenarioResponse, unitsResponse] = await Promise.all([
-          getCurrentSimulationScenario(),
-          getSimulationUnits(),
-        ]);
+    async function initializePage() {
+      const scenario = await loadSimulationData();
 
-        if (!isMounted) {
-          return;
-        }
-
-        setActiveScenario({
-          id: scenarioResponse.id,
-          title: scenarioResponse.title,
-          category: scenarioResponse.category,
-          address: scenarioResponse.address,
-          audioFileName: scenarioResponse.audioFileName,
-        });
-
-        setAvailableUnits({
-          fire: Array.isArray(unitsResponse?.fire) ? unitsResponse.fire : [],
-          ambulance: Array.isArray(unitsResponse?.ambulance) ? unitsResponse.ambulance : [],
-          police: Array.isArray(unitsResponse?.police) ? unitsResponse.police : [],
-        });
-
-        setDataLoadMessage("");
-      } catch (err) {
-        if (!isMounted) {
-          return;
-        }
-
-        setDataLoadMessage(
-          "A szituációs adatok most nem érhetők el backendről, ezért az oldal tartalék adatokkal működik."
-        );
+      if (!isMounted) {
+        return;
       }
+
+      setFormData({
+        callerName: "",
+        callerPhone: "",
+        location: scenario?.address || "",
+        eventDescription: "",
+        note: "",
+      });
     }
 
-    loadSimulationData();
+    initializePage();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadSimulationData]);
 
   const availabilityLabel =
     availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
-
-  const resetSimulationState = (availability = "NOT_READY", call = "IDLE") => {
-    setAvailabilityStatus(availability);
-    setCallState(call);
-    setSimulationStep("FORM");
-    setFormData({
-      callerName: "",
-      callerPhone: "",
-      location: activeScenario?.address || "",
-      eventDescription: "",
-      note: "",
-    });
-    setSelectedUnits([]);
-    setErrors({});
-    setMessage("");
-    setEvaluationResult(null);
-    setIsSubmittingAttempt(false);
-  };
 
   const handleSetAvailable = () => {
     resetSimulationState("AVAILABLE", "WAITING");
@@ -284,8 +296,15 @@ function UserSimulationPage() {
     }
   };
 
-  const handleRestartSimulation = () => {
-    resetSimulationState("NOT_READY", "IDLE");
+  const handleRestartSimulation = async () => {
+    setIsReloadingScenario(true);
+    setErrors({});
+    setMessage("");
+
+    const scenario = await loadSimulationData();
+    resetSimulationState("NOT_READY", "IDLE", scenario);
+
+    setIsReloadingScenario(false);
   };
 
   const handleBackToDashboard = () => {
@@ -331,17 +350,23 @@ function UserSimulationPage() {
     }
 
     return (
-      <SimulationEvaluationPanel
-        matchedUnits={evaluationResult?.matchedUnits || []}
-        missingUnits={evaluationResult?.missingUnits || []}
-        incorrectUnits={evaluationResult?.incorrectUnits || []}
-        evaluationStatus={evaluationResult?.evaluationStatus}
-        score={evaluationResult?.score}
-        noteEvaluationStatus={evaluationResult?.noteEvaluationStatus}
-        evaluatorSummary={evaluationResult?.evaluatorSummary}
-        onRestart={handleRestartSimulation}
-        onBackToDashboard={handleBackToDashboard}
-      />
+      <>
+        <SimulationEvaluationPanel
+          matchedUnits={evaluationResult?.matchedUnits || []}
+          missingUnits={evaluationResult?.missingUnits || []}
+          incorrectUnits={evaluationResult?.incorrectUnits || []}
+          evaluationStatus={evaluationResult?.evaluationStatus}
+          score={evaluationResult?.score}
+          noteEvaluationStatus={evaluationResult?.noteEvaluationStatus}
+          evaluatorSummary={evaluationResult?.evaluatorSummary}
+          onRestart={handleRestartSimulation}
+          onBackToDashboard={handleBackToDashboard}
+        />
+
+        {isReloadingScenario && (
+          <p style={{ marginTop: "12px" }}>Új szituáció betöltése folyamatban...</p>
+        )}
+      </>
     );
   };
 
