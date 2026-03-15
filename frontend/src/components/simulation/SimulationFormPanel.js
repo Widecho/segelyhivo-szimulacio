@@ -25,6 +25,15 @@ function inputStyle(hasError) {
   };
 }
 
+function dropdownItemStyle(isActive) {
+  return {
+    padding: "10px 12px",
+    borderBottom: "1px solid #eaecf0",
+    cursor: "pointer",
+    backgroundColor: isActive ? "#eef4ff" : "#fff",
+  };
+}
+
 function SimulationFormPanel({
   formData = {
     callerName: "",
@@ -37,6 +46,13 @@ function SimulationFormPanel({
   onChange,
   onSubmit,
   selectedCoordinates,
+  locationSearchText,
+  onLocationSearchTextChange,
+  locationSuggestions,
+  onSelectLocationSuggestion,
+  isSearchingLocation,
+  coordinateInput,
+  onCoordinateInputChange,
 }) {
   return (
     <form onSubmit={onSubmit} style={{ display: "grid", gap: "16px" }}>
@@ -70,32 +86,87 @@ function SimulationFormPanel({
         )}
       </div>
 
-      <div>
-        <label htmlFor="location">Helyszín</label>
+      <div style={{ position: "relative" }}>
+        <label htmlFor="locationSearch">Helyszín</label>
         <input
-          id="location"
-          name="location"
+          id="locationSearch"
+          name="locationSearch"
           type="text"
-          value={formData.location}
-          onChange={onChange}
-          readOnly
-          style={{
-            ...inputStyle(Boolean(errors.location)),
-            backgroundColor: "#f8fafc",
-          }}
+          value={locationSearchText}
+          onChange={(event) => onLocationSearchTextChange(event.target.value)}
+          placeholder="Kezdj el címet írni..."
+          autoComplete="off"
+          style={inputStyle(Boolean(errors.location))}
         />
+
         <div style={helperStyle()}>
-          A helyszínt a jobb oldali térképes panelen kell kiválasztani
-          OpenStreetMap alapú kereséssel vagy a térképen.
+          A cím írás közben OpenStreetMap alapú találatokból választható ki.
         </div>
-        {selectedCoordinates && (
-          <div style={helperStyle()}>
-            Koordináták: {selectedCoordinates.lat.toFixed(6)},{" "}
-            {selectedCoordinates.lon.toFixed(6)}
+
+        {isSearchingLocation && (
+          <div style={helperStyle()}>Címkeresés folyamatban...</div>
+        )}
+
+        {locationSuggestions.length > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: "100%",
+              zIndex: 20,
+              marginTop: "6px",
+              border: "1px solid #d0d5dd",
+              borderRadius: "10px",
+              overflow: "hidden",
+              backgroundColor: "#fff",
+              boxShadow: "0 8px 24px rgba(16,24,40,0.12)",
+              maxHeight: "220px",
+              overflowY: "auto",
+            }}
+          >
+            {locationSuggestions.map((item, index) => (
+              <div
+                key={`${item.displayName}-${index}`}
+                style={dropdownItemStyle(false)}
+                onMouseDown={() => onSelectLocationSuggestion(item)}
+              >
+                <div style={{ fontWeight: 600 }}>{item.shortDisplayName}</div>
+                <div style={{ fontSize: "12px", color: "#667085", marginTop: "2px" }}>
+                  {item.displayName}
+                </div>
+              </div>
+            ))}
           </div>
         )}
+
         {errors.location && (
           <div style={fieldErrorStyle()}>{errors.location}</div>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="coordinateInput">Koordináták</label>
+        <input
+          id="coordinateInput"
+          name="coordinateInput"
+          type="text"
+          value={coordinateInput}
+          onChange={(event) => onCoordinateInputChange(event.target.value)}
+          placeholder="Pl.: 48.103415, 20.752698"
+          autoComplete="off"
+          style={inputStyle(Boolean(errors.location))}
+        />
+
+        <div style={helperStyle()}>
+          Ide közvetlenül koordinátát is írhatsz. Ha érvényes, a rendszer automatikusan kitölti a hozzá tartozó címet.
+        </div>
+
+        {selectedCoordinates && (
+          <div style={helperStyle()}>
+            Aktuális koordináták: {selectedCoordinates.lat.toFixed(6)},{" "}
+            {selectedCoordinates.lon.toFixed(6)}
+          </div>
         )}
       </div>
 

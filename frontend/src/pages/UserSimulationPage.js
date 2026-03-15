@@ -28,6 +28,22 @@ const fallbackScenario = {
   audioFileName: "tuzeset_01.mp3",
 };
 
+function shortenAddress(text, maxLength = 70) {
+  if (!text) {
+    return "";
+  }
+
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 3)}...`;
+}
+
+function formatCoordinates(lat, lon) {
+  return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
 function UserSimulationPage() {
   const navigate = useNavigate();
 
@@ -54,9 +70,10 @@ function UserSimulationPage() {
   });
 
   const [selectedCoordinates, setSelectedCoordinates] = useState(null);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+  const [locationSearchText, setLocationSearchText] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [coordinateInput, setCoordinateInput] = useState("");
   const [mapMessage, setMapMessage] = useState("");
 
   const resetSimulationState = useCallback((availability = "NOT_READY", call = "IDLE") => {
@@ -71,14 +88,37 @@ function UserSimulationPage() {
       note: "",
     });
     setSelectedCoordinates(null);
-    setSearchInput("");
-    setSearchResults([]);
+    setLocationSearchText("");
+    setLocationSuggestions([]);
+    setCoordinateInput("");
     setMapMessage("");
     setSelectedUnits([]);
     setErrors({});
     setMessage("");
     setEvaluationResult(null);
     setIsSubmittingAttempt(false);
+  }, []);
+
+  const applyChosenLocation = useCallback((locationItem, infoMessage = "") => {
+    setFormData((prev) => ({
+      ...prev,
+      location: locationItem.displayName,
+    }));
+
+    setSelectedCoordinates({
+      lat: locationItem.lat,
+      lon: locationItem.lon,
+    });
+
+    setLocationSearchText(shortenAddress(locationItem.displayName));
+    setCoordinateInput(formatCoordinates(locationItem.lat, locationItem.lon));
+    setLocationSuggestions([]);
+    setMapMessage(infoMessage || "A helyszín sikeresen kiválasztva.");
+
+    setErrors((prev) => ({
+      ...prev,
+      location: "",
+    }));
   }, []);
 
   const loadSimulationData = useCallback(async () => {
@@ -137,63 +177,136 @@ function UserSimulationPage() {
     };
   }, [loadSimulationData, resetSimulationState]);
 
+  useEffect(() => {
+    if (simulationStep !== "FORM") {
+      return;
+    }
+
+    const trimmed = locationSearchText.trim();
+
+    if (!trimmed) {
+      setLocationSuggestions([]);
+      setIsSearchingLocation(false);
+      return;
+    }
+
+    if (
+      selectedCoordinates &&
+      formData.location &&
+      trimmed === shortenAddress(formData.location).trim()
+    ) {
+      setLocationSuggestions([]);
+      setIsSearchingLocation(false);
+      return;
+    }
+
+    const parsedCoordinates = parseCoordinateInput(trimmed);
+
+    if (parsedCoordinates) {
+      setLocationSuggestions([]);
+      setIsSearchingLocation(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsSearchingLocation(true);
+
+      try {
+        const results = await searchLocations(trimmed);
+
+        setLocationSuggestions(
+          results.map((item) => ({
+            ...item,
+            shortDisplayName: shortenAddress(item.displayName, 72),
+          }))
+        );
+      } catch (err) {
+        setLocationSuggestions([]);
+      } finally {
+        setIsSearchingLocation(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timeoutId);
+  }, [locationSearchText, formData.location, selectedCoordinates, simulationStep]);
+
+  useEffect(() => {
+    if (simulationStep !== "FORM") {
+      return;
+    }
+
+    const trimmed = coordinateInput.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    const parsed = parseCoordinateInput(trimmed);
+
+    if (!parsed) {
+      return;
+    }
+
+    if (
+      selectedCoordinates &&
+      Math.abs(selectedCoordinates.lat - parsed.lat) < 0.000001 &&
+      Math.abs(selectedCoordinates.lon - parsed.lon) < 0.000001
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const reversed = await reverseGeocode(parsed.lat, parsed.lon);
+        applyChosenLocation(reversed, "A koordináták alapján a cím automatikusan kitöltődött.");
+      } catch (err) {
+        setMapMessage(err.message || "Nem sikerült a koordinátákhoz címet találni.");
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [coordinateInput, selectedCoordinates, applyChosenLocation, simulationStep]);
+
   const availabilityLabel =
     availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
 
-  const applyChosenLocation = useCallback((locationItem) => {
+  const handleLocationSearchTextChange = (value) => {
+    setLocationSearchText(value);
+    setMapMessage("");
+
+    if (!value.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        location: "",
+      }));
+      setSelectedCoordinates(null);
+      setCoordinateInput("");
+      setLocationSuggestions([]);
+      return;
+    }
+
     setFormData((prev) => ({
-      ...prev,
-      location: locationItem.displayName,
-    }));
-
-    setSelectedCoordinates({
-      lat: locationItem.lat,
-      lon: locationItem.lon,
-    });
-
-    setSearchInput(locationItem.displayName);
-    setSearchResults([]);
-    setMapMessage("A helyszín sikeresen kiválasztva.");
-    setErrors((prev) => ({
       ...prev,
       location: "",
     }));
-  }, []);
+    setSelectedCoordinates(null);
+  };
 
-  const handleSearchSubmit = async () => {
+  const handleCoordinateInputChange = (value) => {
+    setCoordinateInput(value);
     setMapMessage("");
-    setSearchResults([]);
 
-    const parsedCoordinates = parseCoordinateInput(searchInput);
-
-    setIsSearchingLocation(true);
-
-    try {
-      if (parsedCoordinates) {
-        const reversed = await reverseGeocode(parsedCoordinates.lat, parsedCoordinates.lon);
-        applyChosenLocation(reversed);
-        setMapMessage("A koordináták alapján a cím automatikusan kitöltődött.");
-        return;
-      }
-
-      const results = await searchLocations(searchInput);
-
-      if (results.length === 0) {
-        setMapMessage("Nem találtam megfelelő címet a megadott keresésre.");
-        return;
-      }
-
-      setSearchResults(results);
-      setMapMessage("Válassz egy találatot a listából.");
-    } catch (err) {
-      setMapMessage(err.message || "Nem sikerült helyet keresni.");
-    } finally {
-      setIsSearchingLocation(false);
+    if (!value.trim()) {
+      setSelectedCoordinates(null);
+      setFormData((prev) => ({
+        ...prev,
+        location: "",
+      }));
     }
   };
 
-  const handleSelectSearchResult = (result) => {
-    applyChosenLocation(result);
+  const handleSelectLocationSuggestion = (result) => {
+    applyChosenLocation(result, "A helyszín sikeresen kiválasztva.");
   };
 
   const handleMapRightClick = async (latlng) => {
@@ -201,8 +314,7 @@ function UserSimulationPage() {
 
     try {
       const reversed = await reverseGeocode(latlng.lat, latlng.lng);
-      applyChosenLocation(reversed);
-      setMapMessage("A cím áthelyezése sikeres volt.");
+      applyChosenLocation(reversed, "A cím áthelyezése sikeres volt.");
     } catch (err) {
       setMapMessage(err.message || "Nem sikerült a cím áthelyezése.");
     }
@@ -257,6 +369,10 @@ function UserSimulationPage() {
 
     if (!formData.location.trim()) {
       newErrors.location = "A helyszín kiválasztása kötelező.";
+    }
+
+    if (!selectedCoordinates) {
+      newErrors.location = "Érvényes helyszín vagy koordináta kiválasztása kötelező.";
     }
 
     if (!formData.eventDescription.trim()) {
@@ -398,6 +514,13 @@ function UserSimulationPage() {
           onChange={handleChange}
           onSubmit={handleSubmitSimulation}
           selectedCoordinates={selectedCoordinates}
+          locationSearchText={locationSearchText}
+          onLocationSearchTextChange={handleLocationSearchTextChange}
+          locationSuggestions={locationSuggestions}
+          onSelectLocationSuggestion={handleSelectLocationSuggestion}
+          isSearchingLocation={isSearchingLocation}
+          coordinateInput={coordinateInput}
+          onCoordinateInputChange={handleCoordinateInputChange}
         />
       );
     }
@@ -497,15 +620,9 @@ function UserSimulationPage() {
           <SimulationMapPanel
             location={formData.location}
             selectedCoordinates={selectedCoordinates}
-            searchInput={searchInput}
-            onSearchInputChange={setSearchInput}
-            searchResults={searchResults}
-            onSearchSubmit={handleSearchSubmit}
-            onSelectSearchResult={handleSelectSearchResult}
-            onMapRightClick={handleMapRightClick}
-            isSearching={isSearchingLocation}
             mapMessage={mapMessage}
             selectedUnits={selectedUnits}
+            onMapRightClick={handleMapRightClick}
           />
         </div>
       </div>
