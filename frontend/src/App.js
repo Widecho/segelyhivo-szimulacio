@@ -9,6 +9,7 @@ import UserResultsPage from "./pages/UserResultsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminCreateScenarioPage from "./pages/AdminCreateScenarioPage";
 import AdminEditScenarioPage from "./pages/AdminEditScenarioPage";
+import AdminScenarioDetailsPage from "./pages/AdminScenarioDetailsPage";
 import AdminScenariosPage from "./pages/AdminScenariosPage";
 import AdminUserResultsPage from "./pages/AdminUserResultsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
@@ -90,6 +91,17 @@ function App() {
                 <ProtectedRoute>
                   <RoleRoute allowedRole="ADMIN">
                     <AdminCreateScenarioPage />
+                  </RoleRoute>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/scenarios/:scenarioId"
+              element={
+                <ProtectedRoute>
+                  <RoleRoute allowedRole="ADMIN">
+                    <AdminScenarioDetailsPage />
                   </RoleRoute>
                 </ProtectedRoute>
               }

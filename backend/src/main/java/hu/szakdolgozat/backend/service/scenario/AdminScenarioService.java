@@ -113,9 +113,15 @@ public class AdminScenarioService {
                         "A szituáció nem található."
                 ));
 
-        List<Long> selectedUnitIds = scenarioRequiredUnitRepository.findByScenario_Id(scenarioId)
-                .stream()
+        List<ScenarioRequiredUnit> requiredUnits = scenarioRequiredUnitRepository.findByScenario_Id(scenarioId);
+
+        List<Long> selectedUnitIds = requiredUnits.stream()
                 .map(item -> item.getEmergencyUnit().getId())
+                .toList();
+
+        List<String> selectedUnitNames = requiredUnits.stream()
+                .map(item -> item.getEmergencyUnit().getDisplayName())
+                .sorted()
                 .toList();
 
         return new ScenarioDetailsResponse(
@@ -126,7 +132,11 @@ public class AdminScenarioService {
                 scenario.getAudioFileName(),
                 scenario.getExpectedNote(),
                 scenario.getIsActive(),
-                selectedUnitIds
+                selectedUnitIds,
+                selectedUnitNames,
+                scenario.getCreatedByUser() != null ? scenario.getCreatedByUser().getUsername() : null,
+                scenario.getCreatedAt(),
+                scenario.getUpdatedAt()
         );
     }
 

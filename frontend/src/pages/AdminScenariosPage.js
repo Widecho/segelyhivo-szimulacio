@@ -183,6 +183,13 @@ function AdminScenariosPage() {
                 }}
               >
                 <Link
+                  to={`/admin/scenarios/${scenario.id}`}
+                  style={actionButtonStyle("#475467")}
+                >
+                  Részletek
+                </Link>
+
+                <Link
                   to={`/admin/scenarios/${scenario.id}/edit`}
                   style={actionButtonStyle("#1f3c88")}
                 >

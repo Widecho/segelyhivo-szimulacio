@@ -3,6 +3,7 @@ package hu.szakdolgozat.backend.dto.scenario;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -17,4 +18,8 @@ public class ScenarioDetailsResponse {
     private String expectedNote;
     private Boolean isActive;
     private List<Long> selectedUnitIds;
+    private List<String> selectedUnitNames;
+    private String createdByUsername;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
