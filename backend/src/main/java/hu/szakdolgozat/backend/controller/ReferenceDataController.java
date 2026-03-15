@@ -1,5 +1,6 @@
 package hu.szakdolgozat.backend.controller;
 
+import hu.szakdolgozat.backend.entity.ScenarioCategory;
 import hu.szakdolgozat.backend.repository.EmergencyServiceTypeRepository;
 import hu.szakdolgozat.backend.repository.EmergencyUnitRepository;
 import hu.szakdolgozat.backend.repository.RegionRepository;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -46,5 +48,20 @@ public class ReferenceDataController {
         response.put("activeAmbulanceUnitCount", emergencyUnitRepository.findByServiceType_CodeAndIsActiveTrue("AMBULANCE").size());
         response.put("activePoliceUnitCount", emergencyUnitRepository.findByServiceType_CodeAndIsActiveTrue("POLICE").size());
         return response;
+    }
+
+    @GetMapping("/api/reference/scenario-categories")
+    public List<Map<String, Object>> getScenarioCategories() {
+        return scenarioCategoryRepository.findAllByOrderByNameAsc()
+                .stream()
+                .map(this::mapCategory)
+                .toList();
+    }
+
+    private Map<String, Object> mapCategory(ScenarioCategory category) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", category.getId());
+        result.put("name", category.getName());
+        return result;
     }
 }

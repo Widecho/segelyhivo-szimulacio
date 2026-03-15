@@ -1,41 +1,82 @@
-import { useState } from "react";
-import mockEmergencyUnits from "../utils/mockEmergencyUnits";
-import mockScenarioCategories from "../utils/mockScenarioCategories";
-import { saveCustomScenario } from "../utils/scenarioStorage";
-import "../styles/auth.css";
-
-function generateScenarioCode() {
-  const now = new Date();
-
-  const year = now.getFullYear().toString();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  const datePart = `${year}${month}${day}`;
-
-  let randomPart = "";
-  for (let i = 0; i < 10; i += 1) {
-    randomPart += Math.floor(Math.random() * 10);
-  }
-
-  return `112${datePart}${randomPart}`;
-}
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { createAdminScenario } from "../services/adminService";
+import { getScenarioCategories } from "../services/referenceService";
+import { getSimulationUnits } from "../services/simulationService";
 
 function AdminCreateScenarioPage() {
-  const [formData, setFormData] = useState({
-    scenarioCode: generateScenarioCode(),
-    title: "",
-    category: "",
-    audioFileName: "",
-    geoAddress: "",
-    latitude: "",
-    longitude: "",
-    expectedNote: "",
-    selectedUnits: [],
+  const navigate = useNavigate();
+
+  const [categories, setCategories] = useState([]);
+  const [unitGroups, setUnitGroups] = useState({
+    fire: [],
+    ambulance: [],
+    police: [],
   });
 
-  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState({
+    title: "",
+    categoryName: "",
+    address: "",
+    audioFileName: "",
+    expectedNote: "",
+  });
+
+  const [selectedUnitIds, setSelectedUnitIds] = useState([]);
+  const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadReferenceData() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const [categoryResponse, unitResponse] = await Promise.all([
+          getScenarioCategories(),
+          getSimulationUnits(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const loadedCategories = Array.isArray(categoryResponse) ? categoryResponse : [];
+
+        setCategories(loadedCategories);
+        setUnitGroups({
+          fire: Array.isArray(unitResponse?.fire) ? unitResponse.fire : [],
+          ambulance: Array.isArray(unitResponse?.ambulance) ? unitResponse.ambulance : [],
+          police: Array.isArray(unitResponse?.police) ? unitResponse.police : [],
+        });
+
+        if (loadedCategories.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            categoryName: prev.categoryName || loadedCategories[0].name,
+          }));
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || "Nem sikerült betölteni a referenciaadatokat.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadReferenceData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -45,310 +86,185 @@ function AdminCreateScenarioPage() {
       [name]: value,
     }));
 
-    setErrors((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
-
+    setError("");
     setMessage("");
   };
 
-  const handleUnitToggle = (unitName) => {
-    setFormData((prev) => {
-      const isAlreadySelected = prev.selectedUnits.includes(unitName);
-
-      let updatedUnits;
-
-      if (isAlreadySelected) {
-        updatedUnits = prev.selectedUnits.filter((unit) => unit !== unitName);
-      } else {
-        if (prev.selectedUnits.length >= 3) {
-          return prev;
-        }
-
-        updatedUnits = [...prev.selectedUnits, unitName];
+  const handleToggleUnit = (unitId) => {
+    setSelectedUnitIds((prev) => {
+      if (prev.includes(unitId)) {
+        return prev.filter((id) => id !== unitId);
       }
 
-      return {
-        ...prev,
-        selectedUnits: updatedUnits,
-      };
+      return [...prev, unitId];
     });
 
-    setErrors((prev) => ({
-      ...prev,
-      selectedUnits: "",
-    }));
-
+    setError("");
     setMessage("");
   };
 
-  const validateCoordinate = (value) => {
-    if (!value.trim()) {
-      return false;
-    }
-
-    return !Number.isNaN(Number(value));
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = "A szituáció címének megadása kötelező.";
-    }
-
-    if (!formData.category.trim()) {
-      newErrors.category = "A kategória kiválasztása kötelező.";
-    }
-
-    if (!formData.audioFileName.trim()) {
-      newErrors.audioFileName = "A hanganyag nevének megadása kötelező.";
-    }
-
-    if (!formData.geoAddress.trim()) {
-      newErrors.geoAddress = "A geokódolt cím megadása kötelező.";
-    }
-
-    if (!validateCoordinate(formData.latitude)) {
-      newErrors.latitude = "A szélességi fokot számszerűen kell megadni.";
-    }
-
-    if (!validateCoordinate(formData.longitude)) {
-      newErrors.longitude = "A hosszúsági fokot számszerűen kell megadni.";
-    }
-
-    if (!formData.expectedNote.trim()) {
-      newErrors.expectedNote = "Az elvárt jegyzet megadása kötelező.";
-    }
-
-    if (formData.selectedUnits.length < 1) {
-      newErrors.selectedUnits =
-        "Legalább egy készenléti szerv kiválasztása kötelező.";
-    }
-
-    if (formData.selectedUnits.length > 3) {
-      newErrors.selectedUnits =
-        "Maximum három készenléti szerv választható ki.";
-    }
-
-    return newErrors;
-  };
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const validationErrors = validateForm();
+    setIsSubmitting(true);
+    setError("");
+    setMessage("");
 
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      setMessage("");
-      return;
+    try {
+      const response = await createAdminScenario({
+        title: formData.title,
+        categoryName: formData.categoryName,
+        address: formData.address,
+        audioFileName: formData.audioFileName,
+        expectedNote: formData.expectedNote,
+        selectedUnitIds,
+      });
+
+      setMessage(response.message || "A szituáció sikeresen létrejött.");
+
+      setTimeout(() => {
+        navigate("/admin/scenarios");
+      }, 800);
+    } catch (err) {
+      setError(err.message || "Nem sikerült létrehozni a szituációt.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const scenarioPayload = {
-      id: formData.scenarioCode,
-      title: formData.title,
-      audioFileName: formData.audioFileName,
-      address: formData.geoAddress,
-      expectedNote: formData.expectedNote,
-      requiredUnits: formData.selectedUnits,
-      category: formData.category,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      createdAt: new Date().toLocaleString("hu-HU"),
-    };
-
-    saveCustomScenario(scenarioPayload);
-
-    setErrors({});
-    setMessage(
-      `Mock mentés sikeres: "${formData.title}" szituáció rögzítve. Azonosító: ${formData.scenarioCode}`
-    );
-
-    setFormData({
-      scenarioCode: generateScenarioCode(),
-      title: "",
-      category: "",
-      audioFileName: "",
-      geoAddress: "",
-      latitude: "",
-      longitude: "",
-      expectedNote: "",
-      selectedUnits: [],
-    });
   };
 
-  const renderUnitGroup = (groupTitle, units) => (
-    <div className="form-section">
-      <h3>{groupTitle}</h3>
+  const renderUnitGroup = (title, units) => (
+    <div
+      style={{
+        border: "1px solid #ddd",
+        borderRadius: "12px",
+        padding: "14px",
+        backgroundColor: "#fafafa",
+      }}
+    >
+      <h4 style={{ marginTop: 0 }}>{title}</h4>
 
-      <div className="checkbox-list">
+      <div style={{ display: "grid", gap: "10px" }}>
         {units.map((unit) => (
-          <label key={unit} className="checkbox-item">
+          <label key={unit.id} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <input
               type="checkbox"
-              checked={formData.selectedUnits.includes(unit)}
-              onChange={() => handleUnitToggle(unit)}
+              checked={selectedUnitIds.includes(unit.id)}
+              onChange={() => handleToggleUnit(unit.id)}
             />
-            <span>{unit}</span>
+            <span>{unit.name}</span>
           </label>
         ))}
       </div>
     </div>
   );
 
+  if (isLoading) {
+    return <p>Betöltés...</p>;
+  }
+
   return (
     <div>
       <h2>Új szituáció létrehozása</h2>
-      <p>
-        Itt adhatja meg az admin a szituáció alapadatait, az elvárt jegyzetet,
-        a helyszín adatait és a kiválasztandó készenléti szerveket.
-      </p>
+      <p>Itt hozhatsz létre új, backendbe mentett szituációt.</p>
 
-      <form
-        className="auth-form"
-        onSubmit={handleSubmit}
-        style={{ marginTop: "24px" }}
-      >
-        <div className="auth-form-group">
-          <label htmlFor="scenarioCode">Generált szituációazonosító</label>
+      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {message && <p style={{ color: "green" }}>{message}</p>}
+
+      <form onSubmit={handleSubmit} style={{ marginTop: "20px", display: "grid", gap: "16px" }}>
+        <div>
+          <label>Cím</label>
           <input
-            id="scenarioCode"
-            name="scenarioCode"
             type="text"
-            value={formData.scenarioCode}
-            readOnly
-          />
-        </div>
-
-        <div className="auth-form-group">
-          <label htmlFor="title">Szituáció címe</label>
-          <input
-            id="title"
             name="title"
-            type="text"
-            placeholder="Például: Családi ház tűzeset"
             value={formData.title}
             onChange={handleChange}
+            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
           />
-          {errors.title && <p className="auth-error">{errors.title}</p>}
         </div>
 
-        <div className="auth-form-group">
-          <label htmlFor="category">Kategória</label>
+        <div>
+          <label>Kategória</label>
           <select
-            id="category"
-            name="category"
-            value={formData.category}
+            name="categoryName"
+            value={formData.categoryName}
             onChange={handleChange}
+            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
           >
-            <option value="">Válassz kategóriát</option>
-            {mockScenarioCategories.map((category) => (
-              <option key={category} value={category}>
-                {category}
+            {categories.map((category) => (
+              <option key={category.id} value={category.name}>
+                {category.name}
               </option>
             ))}
           </select>
-          {errors.category && <p className="auth-error">{errors.category}</p>}
         </div>
 
-        <div className="auth-form-group">
-          <label htmlFor="audioFileName">Hanganyag neve</label>
+        <div>
+          <label>Helyszín</label>
           <input
-            id="audioFileName"
-            name="audioFileName"
             type="text"
-            placeholder="Például: tuzeset_01.mp3"
+            name="address"
+            value={formData.address}
+            onChange={handleChange}
+            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
+          />
+        </div>
+
+        <div>
+          <label>Hangfájl neve</label>
+          <input
+            type="text"
+            name="audioFileName"
             value={formData.audioFileName}
             onChange={handleChange}
+            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
           />
-          {errors.audioFileName && (
-            <p className="auth-error">{errors.audioFileName}</p>
-          )}
         </div>
 
-        <div className="auth-form-group">
-          <label htmlFor="geoAddress">Geokódolt cím</label>
-          <input
-            id="geoAddress"
-            name="geoAddress"
-            type="text"
-            placeholder="Például: 3300 Eger, Kossuth Lajos utca 12."
-            value={formData.geoAddress}
-            onChange={handleChange}
-          />
-          {errors.geoAddress && (
-            <p className="auth-error">{errors.geoAddress}</p>
-          )}
-        </div>
-
-        <div className="auth-form-group">
-          <label htmlFor="latitude">Szélességi fok</label>
-          <input
-            id="latitude"
-            name="latitude"
-            type="text"
-            placeholder="Például: 47.902300"
-            value={formData.latitude}
-            onChange={handleChange}
-          />
-          {errors.latitude && <p className="auth-error">{errors.latitude}</p>}
-        </div>
-
-        <div className="auth-form-group">
-          <label htmlFor="longitude">Hosszúsági fok</label>
-          <input
-            id="longitude"
-            name="longitude"
-            type="text"
-            placeholder="Például: 20.377200"
-            value={formData.longitude}
-            onChange={handleChange}
-          />
-          {errors.longitude && <p className="auth-error">{errors.longitude}</p>}
-        </div>
-
-        <div className="auth-form-group">
-          <label htmlFor="expectedNote">Elvárt jegyzet</label>
+        <div>
+          <label>Elvárt jegyzet</label>
           <textarea
-            id="expectedNote"
             name="expectedNote"
-            rows="5"
-            placeholder="Írd le röviden az elvárt jegyzet lényegét..."
             value={formData.expectedNote}
             onChange={handleChange}
-            style={{
-              resize: "vertical",
-            }}
+            rows="5"
+            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
           />
-          {errors.expectedNote && (
-            <p className="auth-error">{errors.expectedNote}</p>
-          )}
         </div>
 
-        <div className="form-section">
-          <h3>Kiválasztandó készenléti szervek</h3>
-          <p className="auth-helper-text">
-            Minimum 1, maximum 3 egység választható ki összesen.
-          </p>
+        <div>
+          <h3>Elvárt egységek</h3>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "16px",
+              marginTop: "12px",
+            }}
+          >
+            {renderUnitGroup("Tűzoltóság", unitGroups.fire)}
+            {renderUnitGroup("Mentőszolgálat", unitGroups.ambulance)}
+            {renderUnitGroup("Rendőrség", unitGroups.police)}
+          </div>
         </div>
 
-        {renderUnitGroup("Tűzoltóság", mockEmergencyUnits.fire)}
-        {renderUnitGroup("Mentőszolgálat", mockEmergencyUnits.ambulance)}
-        {renderUnitGroup("Rendőrség", mockEmergencyUnits.police)}
-
-        {errors.selectedUnits && (
-          <p className="auth-error" style={{ marginTop: "10px" }}>
-            {errors.selectedUnits}
-          </p>
-        )}
-
-        {message && <div className="form-message">{message}</div>}
-
-        <button type="submit" className="auth-form-button">
-          Szituáció mentése
-        </button>
+        <div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={{
+              padding: "12px 18px",
+              border: "none",
+              borderRadius: "8px",
+              backgroundColor: "#1f3c88",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {isSubmitting ? "Mentés..." : "Szituáció mentése"}
+          </button>
+        </div>
       </form>
     </div>
   );

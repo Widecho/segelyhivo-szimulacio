@@ -17,3 +17,10 @@ export async function getAdminAttempts() {
     method: "GET",
   });
 }
+
+export async function createAdminScenario(payload) {
+  return apiRequest("/admin/scenarios", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

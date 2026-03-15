@@ -1,0 +1,27 @@
+package hu.szakdolgozat.backend.controller;
+
+import hu.szakdolgozat.backend.dto.scenario.CreateScenarioRequest;
+import hu.szakdolgozat.backend.dto.scenario.CreateScenarioResponse;
+import hu.szakdolgozat.backend.service.scenario.AdminScenarioService;
+import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/admin/scenarios")
+public class AdminScenarioController {
+
+    private final AdminScenarioService adminScenarioService;
+
+    public AdminScenarioController(AdminScenarioService adminScenarioService) {
+        this.adminScenarioService = adminScenarioService;
+    }
+
+    @PostMapping
+    public CreateScenarioResponse createScenario(
+            Authentication authentication,
+            @Valid @RequestBody CreateScenarioRequest request
+    ) {
+        return adminScenarioService.createScenario(authentication.getName(), request);
+    }
+}

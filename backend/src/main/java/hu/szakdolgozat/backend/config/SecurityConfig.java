@@ -35,6 +35,7 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/api/health/db"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me/**").authenticated()
                         .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "USER")
                         .requestMatchers("/api/reference/**").authenticated()
