@@ -1,6 +1,30 @@
 import { useEffect, useState } from "react";
 import { getAdminAttempts } from "../services/adminService";
 
+function feedbackStyle(type) {
+  if (type === "SUCCESS") {
+    return {
+      backgroundColor: "#ecfdf3",
+      border: "1px solid #abefc6",
+      color: "#067647",
+    };
+  }
+
+  if (type === "ERROR") {
+    return {
+      backgroundColor: "#fef3f2",
+      border: "1px solid #fecdca",
+      color: "#b42318",
+    };
+  }
+
+  return {
+    backgroundColor: "#f5faff",
+    border: "1px solid #b2ddff",
+    color: "#175cd3",
+  };
+}
+
 function AdminUserResultsPage() {
   const [attempts, setAttempts] = useState([]);
   const [error, setError] = useState("");
@@ -40,7 +64,7 @@ function AdminUserResultsPage() {
   return (
     <div>
       <h2>Felhasználói eredmények</h2>
-      <p>Itt láthatók a backendből betöltött próbálkozások és értékelések.</p>
+      <p>Itt láthatók a backendből betöltött próbálkozások és részletes kiértékelések.</p>
 
       {isLoading && <p>Betöltés...</p>}
       {error && <p style={{ color: "crimson" }}>{error}</p>}
@@ -111,6 +135,51 @@ function AdminUserResultsPage() {
               <p style={{ margin: "4px 0" }}>
                 <strong>Beküldés:</strong> {attempt.submittedAt || "-"}
               </p>
+
+              {attempt.evaluatorSummary && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    padding: "12px",
+                    borderRadius: "10px",
+                    backgroundColor: "#f8fafc",
+                    border: "1px solid #e4e7ec",
+                  }}
+                >
+                  <strong>Összegzés:</strong>
+                  <p style={{ margin: "8px 0 0 0" }}>{attempt.evaluatorSummary}</p>
+                </div>
+              )}
+
+              {Array.isArray(attempt.feedbackItems) && attempt.feedbackItems.length > 0 && (
+                <div style={{ marginTop: "14px" }}>
+                  <strong>Részletes visszajelzések:</strong>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: "10px",
+                      marginTop: "10px",
+                    }}
+                  >
+                    {attempt.feedbackItems.map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          ...feedbackStyle(item.feedbackType),
+                          borderRadius: "10px",
+                          padding: "10px 12px",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, marginBottom: "4px" }}>
+                          {item.feedbackType}
+                        </div>
+                        <div>{item.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

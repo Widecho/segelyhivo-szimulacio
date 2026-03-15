@@ -2,7 +2,6 @@ package hu.szakdolgozat.backend.controller;
 
 import hu.szakdolgozat.backend.entity.SimulationAttempt;
 import hu.szakdolgozat.backend.entity.SimulationAttemptFeedbackItem;
-import hu.szakdolgozat.backend.entity.SimulationAttemptSelectedUnit;
 import hu.szakdolgozat.backend.repository.SimulationAttemptFeedbackItemRepository;
 import hu.szakdolgozat.backend.repository.SimulationAttemptRepository;
 import hu.szakdolgozat.backend.repository.SimulationAttemptSelectedUnitRepository;
@@ -52,24 +51,6 @@ public class SimulationAttemptController {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    @GetMapping("/api/attempts/selected-units")
-    public List<Map<String, Object>> getSelectedUnits() {
-        return simulationAttemptSelectedUnitRepository.findAll()
-                .stream()
-                .map(this::mapSelectedUnit)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    @GetMapping("/api/attempts/feedback")
-    public List<Map<String, Object>> getFeedbackItems() {
-        return simulationAttemptFeedbackItemRepository.findAll()
-                .stream()
-                .map(this::mapFeedbackItem)
-                .toList();
-    }
-
     private Map<String, Object> mapAttempt(SimulationAttempt attempt) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", attempt.getId());
@@ -88,26 +69,21 @@ public class SimulationAttemptController {
         result.put("noteEvaluationStatus", attempt.getNoteEvaluationStatus());
         result.put("startedAt", attempt.getStartedAt());
         result.put("submittedAt", attempt.getSubmittedAt());
+        result.put("evaluatorSummary", attempt.getEvaluatorSummary());
+        result.put("feedbackItems", mapFeedbackItems(attempt.getId()));
         return result;
     }
 
-    private Map<String, Object> mapSelectedUnit(SimulationAttemptSelectedUnit item) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", item.getId());
-        result.put("attemptId", item.getSimulationAttempt().getId());
-        result.put("scenarioTitle", item.getSimulationAttempt().getScenario().getTitle());
-        result.put("username", item.getSimulationAttempt().getUser().getUsername());
-        result.put("emergencyUnitName", item.getEmergencyUnit().getDisplayName());
-        result.put("serviceType", item.getEmergencyUnit().getServiceType().getCode());
-        return result;
+    private List<Map<String, Object>> mapFeedbackItems(Long attemptId) {
+        return simulationAttemptFeedbackItemRepository.findBySimulationAttempt_IdOrderByIdAsc(attemptId)
+                .stream()
+                .map(this::mapFeedbackItem)
+                .toList();
     }
 
     private Map<String, Object> mapFeedbackItem(SimulationAttemptFeedbackItem item) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", item.getId());
-        result.put("attemptId", item.getSimulationAttempt().getId());
-        result.put("scenarioTitle", item.getSimulationAttempt().getScenario().getTitle());
-        result.put("username", item.getSimulationAttempt().getUser().getUsername());
         result.put("feedbackType", item.getFeedbackType());
         result.put("message", item.getMessage());
         return result;
