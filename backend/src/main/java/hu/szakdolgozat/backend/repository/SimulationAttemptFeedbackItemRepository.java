@@ -7,7 +7,5 @@ import java.util.List;
 
 public interface SimulationAttemptFeedbackItemRepository extends JpaRepository<SimulationAttemptFeedbackItem, Long> {
 
-    List<SimulationAttemptFeedbackItem> findBySimulationAttempt_Id(Long simulationAttemptId);
-
-    long countBySimulationAttempt_Id(Long simulationAttemptId);
+    List<SimulationAttemptFeedbackItem> findBySimulationAttempt_IdOrderByIdAsc(Long simulationAttemptId);
 }

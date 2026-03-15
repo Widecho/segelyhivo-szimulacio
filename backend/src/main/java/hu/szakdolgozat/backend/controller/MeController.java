@@ -4,7 +4,9 @@ import hu.szakdolgozat.backend.dto.attempt.SubmitSimulationAttemptRequest;
 import hu.szakdolgozat.backend.dto.attempt.SubmitSimulationAttemptResponse;
 import hu.szakdolgozat.backend.entity.AppUser;
 import hu.szakdolgozat.backend.entity.SimulationAttempt;
+import hu.szakdolgozat.backend.entity.SimulationAttemptFeedbackItem;
 import hu.szakdolgozat.backend.repository.AppUserRepository;
+import hu.szakdolgozat.backend.repository.SimulationAttemptFeedbackItemRepository;
 import hu.szakdolgozat.backend.repository.SimulationAttemptRepository;
 import hu.szakdolgozat.backend.service.attempt.SimulationAttemptSubmissionService;
 import jakarta.validation.Valid;
@@ -24,15 +26,18 @@ public class MeController {
 
     private final AppUserRepository appUserRepository;
     private final SimulationAttemptRepository simulationAttemptRepository;
+    private final SimulationAttemptFeedbackItemRepository simulationAttemptFeedbackItemRepository;
     private final SimulationAttemptSubmissionService simulationAttemptSubmissionService;
 
     public MeController(
             AppUserRepository appUserRepository,
             SimulationAttemptRepository simulationAttemptRepository,
+            SimulationAttemptFeedbackItemRepository simulationAttemptFeedbackItemRepository,
             SimulationAttemptSubmissionService simulationAttemptSubmissionService
     ) {
         this.appUserRepository = appUserRepository;
         this.simulationAttemptRepository = simulationAttemptRepository;
+        this.simulationAttemptFeedbackItemRepository = simulationAttemptFeedbackItemRepository;
         this.simulationAttemptSubmissionService = simulationAttemptSubmissionService;
     }
 
@@ -93,6 +98,23 @@ public class MeController {
         result.put("noteEvaluationStatus", attempt.getNoteEvaluationStatus());
         result.put("startedAt", attempt.getStartedAt());
         result.put("submittedAt", attempt.getSubmittedAt());
+        result.put("evaluatorSummary", attempt.getEvaluatorSummary());
+        result.put("feedbackItems", mapFeedbackItems(attempt.getId()));
+        return result;
+    }
+
+    private List<Map<String, Object>> mapFeedbackItems(Long attemptId) {
+        return simulationAttemptFeedbackItemRepository.findBySimulationAttempt_IdOrderByIdAsc(attemptId)
+                .stream()
+                .map(this::mapFeedbackItem)
+                .toList();
+    }
+
+    private Map<String, Object> mapFeedbackItem(SimulationAttemptFeedbackItem item) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", item.getId());
+        result.put("feedbackType", item.getFeedbackType());
+        result.put("message", item.getMessage());
         return result;
     }
 }
