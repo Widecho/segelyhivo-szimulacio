@@ -5,6 +5,7 @@ import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
 import { submitSimulationAttempt } from "../services/userService";
 import { getCurrentSimulationScenario, getSimulationUnits } from "../services/simulationService";
+import { getScenarioCategories } from "../services/referenceService";
 import {
   parseCoordinateInput,
   reverseGeocode,
@@ -49,6 +50,7 @@ function UserSimulationPage() {
 
   const [activeScenario, setActiveScenario] = useState(fallbackScenario);
   const [availableUnits, setAvailableUnits] = useState(mockEmergencyUnits);
+  const [scenarioCategories, setScenarioCategories] = useState([]);
   const [dataLoadMessage, setDataLoadMessage] = useState("");
 
   const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
@@ -64,6 +66,7 @@ function UserSimulationPage() {
   const [formData, setFormData] = useState({
     callerName: "",
     callerPhone: "",
+    categoryName: "",
     location: "",
     note: "",
   });
@@ -82,6 +85,7 @@ function UserSimulationPage() {
     setFormData({
       callerName: "",
       callerPhone: "",
+      categoryName: "",
       location: "",
       note: "",
     });
@@ -124,9 +128,10 @@ function UserSimulationPage() {
 
   const loadSimulationData = useCallback(async () => {
     try {
-      const [scenarioResponse, unitsResponse] = await Promise.all([
+      const [scenarioResponse, unitsResponse, categoriesResponse] = await Promise.all([
         getCurrentSimulationScenario(),
         getSimulationUnits(),
+        getScenarioCategories(),
       ]);
 
       const nextScenario = {
@@ -145,11 +150,13 @@ function UserSimulationPage() {
 
       setActiveScenario(nextScenario);
       setAvailableUnits(nextUnits);
+      setScenarioCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
       setDataLoadMessage("");
 
       return nextScenario;
     } catch (err) {
       setAvailableUnits(mockEmergencyUnits);
+      setScenarioCategories([]);
       setDataLoadMessage(
         "A szituációs adatok most nem érhetők el backendről, ezért az oldal tartalék adatokkal működik."
       );
@@ -371,6 +378,10 @@ function UserSimulationPage() {
       newErrors.callerPhone = "A telefonszám megadása kötelező.";
     }
 
+    if (!formData.categoryName.trim()) {
+      newErrors.categoryName = "A kategória kiválasztása kötelező.";
+    }
+
     if (!formData.location.trim() || !selectedCoordinates) {
       newErrors.location = "Érvényes helyszín vagy koordináta kiválasztása kötelező.";
     }
@@ -444,7 +455,7 @@ function UserSimulationPage() {
         callerName: formData.callerName,
         callerPhone: formData.callerPhone,
         locationText: formData.location,
-        eventDescription: formData.note,
+        eventDescription: formData.categoryName,
         userNote: formData.note,
         selectedUnitIds: selectedUnits.map((unit) => unit.id),
       });
@@ -517,6 +528,7 @@ function UserSimulationPage() {
           isSearchingLocation={isSearchingLocation}
           coordinateInput={coordinateInput}
           onCoordinateInputChange={handleCoordinateInputChange}
+          scenarioCategories={scenarioCategories}
         />
       );
     }

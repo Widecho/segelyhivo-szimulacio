@@ -25,12 +25,12 @@ function inputStyle(hasError) {
   };
 }
 
-function dropdownItemStyle(isActive) {
+function dropdownItemStyle() {
   return {
     padding: "10px 12px",
     borderBottom: "1px solid #eaecf0",
     cursor: "pointer",
-    backgroundColor: isActive ? "#eef4ff" : "#fff",
+    backgroundColor: "#fff",
   };
 }
 
@@ -38,6 +38,7 @@ function SimulationFormPanel({
   formData = {
     callerName: "",
     callerPhone: "",
+    categoryName: "",
     location: "",
     note: "",
   },
@@ -52,6 +53,7 @@ function SimulationFormPanel({
   isSearchingLocation,
   coordinateInput,
   onCoordinateInputChange,
+  scenarioCategories = [],
 }) {
   return (
     <form onSubmit={onSubmit} style={{ display: "grid", gap: "14px" }}>
@@ -82,6 +84,27 @@ function SimulationFormPanel({
         />
         {errors.callerPhone && (
           <div style={fieldErrorStyle()}>{errors.callerPhone}</div>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="categoryName">Kategória</label>
+        <select
+          id="categoryName"
+          name="categoryName"
+          value={formData.categoryName}
+          onChange={onChange}
+          style={inputStyle(Boolean(errors.categoryName))}
+        >
+          <option value="">Válassz kategóriát</option>
+          {scenarioCategories.map((category) => (
+            <option key={category.id || category.name} value={category.name}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+        {errors.categoryName && (
+          <div style={fieldErrorStyle()}>{errors.categoryName}</div>
         )}
       </div>
 
@@ -127,7 +150,7 @@ function SimulationFormPanel({
             {locationSuggestions.map((item, index) => (
               <div
                 key={`${item.displayName}-${index}`}
-                style={dropdownItemStyle(false)}
+                style={dropdownItemStyle()}
                 onMouseDown={() => onSelectLocationSuggestion(item)}
               >
                 <div style={{ fontWeight: 600 }}>{item.shortDisplayName}</div>
