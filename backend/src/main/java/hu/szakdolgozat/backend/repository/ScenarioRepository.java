@@ -15,4 +15,6 @@ public interface ScenarioRepository extends JpaRepository<Scenario, String> {
     long countByIsActiveTrue();
 
     Optional<Scenario> findFirstByIsActiveTrueOrderByCreatedAtDesc();
+
+    Optional<Scenario> findTopByOrderByIdDesc();
 }

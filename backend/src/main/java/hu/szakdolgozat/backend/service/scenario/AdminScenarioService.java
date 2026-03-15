@@ -18,11 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 public class AdminScenarioService {
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final ScenarioRepository scenarioRepository;
     private final ScenarioCategoryRepository scenarioCategoryRepository;
@@ -101,6 +105,18 @@ public class AdminScenarioService {
     }
 
     private String generateScenarioId() {
-        return "112" + System.currentTimeMillis();
+        String datePart = LocalDate.now().format(DATE_FORMATTER);
+        long nextSequence = getNextGlobalSequence();
+        return "112" + datePart + String.format("%010d", nextSequence);
+    }
+
+    private long getNextGlobalSequence() {
+        return scenarioRepository.findTopByOrderByIdDesc()
+                .map(Scenario::getId)
+                .filter(id -> id != null && id.length() == 21)
+                .map(id -> id.substring(11))
+                .map(Long::parseLong)
+                .map(lastSequence -> lastSequence + 1)
+                .orElse(1L);
     }
 }
