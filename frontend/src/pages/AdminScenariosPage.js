@@ -182,6 +182,13 @@ function AdminScenariosPage() {
                   flexWrap: "wrap",
                 }}
               >
+                <Link
+                  to={`/admin/scenarios/${scenario.id}/edit`}
+                  style={actionButtonStyle("#1f3c88")}
+                >
+                  Szerkesztés
+                </Link>
+
                 {scenario.isActive ? (
                   <button
                     type="button"

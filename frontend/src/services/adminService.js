@@ -25,6 +25,19 @@ export async function createAdminScenario(payload) {
   });
 }
 
+export async function getAdminScenarioDetails(scenarioId) {
+  return apiRequest(`/admin/scenarios/${scenarioId}`, {
+    method: "GET",
+  });
+}
+
+export async function updateAdminScenario(scenarioId, payload) {
+  return apiRequest(`/admin/scenarios/${scenarioId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function updateAdminScenarioStatus(scenarioId, isActive) {
   return apiRequest(`/admin/scenarios/${scenarioId}/status`, {
     method: "PATCH",

@@ -2,6 +2,7 @@ package hu.szakdolgozat.backend.service.scenario;
 
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioRequest;
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioResponse;
+import hu.szakdolgozat.backend.dto.scenario.ScenarioDetailsResponse;
 import hu.szakdolgozat.backend.dto.scenario.UpdateScenarioStatusRequest;
 import hu.szakdolgozat.backend.entity.AppUser;
 import hu.szakdolgozat.backend.entity.EmergencyUnit;
@@ -92,12 +93,7 @@ public class AdminScenarioService {
 
         Scenario savedScenario = scenarioRepository.save(scenario);
 
-        for (EmergencyUnit unit : selectedUnits) {
-            ScenarioRequiredUnit requiredUnit = new ScenarioRequiredUnit();
-            requiredUnit.setScenario(savedScenario);
-            requiredUnit.setEmergencyUnit(unit);
-            scenarioRequiredUnitRepository.save(requiredUnit);
-        }
+        saveRequiredUnits(savedScenario, selectedUnits);
 
         return new CreateScenarioResponse(
                 savedScenario.getId(),
@@ -106,6 +102,78 @@ public class AdminScenarioService {
                 savedScenario.getGeoAddress(),
                 selectedUnits.size(),
                 "A szituáció sikeresen létrejött."
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ScenarioDetailsResponse getScenarioDetails(String scenarioId) {
+        Scenario scenario = scenarioRepository.findById(scenarioId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "A szituáció nem található."
+                ));
+
+        List<Long> selectedUnitIds = scenarioRequiredUnitRepository.findByScenario_Id(scenarioId)
+                .stream()
+                .map(item -> item.getEmergencyUnit().getId())
+                .toList();
+
+        return new ScenarioDetailsResponse(
+                scenario.getId(),
+                scenario.getTitle(),
+                scenario.getCategory().getName(),
+                scenario.getGeoAddress(),
+                scenario.getAudioFileName(),
+                scenario.getExpectedNote(),
+                scenario.getIsActive(),
+                selectedUnitIds
+        );
+    }
+
+    @Transactional
+    public CreateScenarioResponse updateScenario(String scenarioId, CreateScenarioRequest request) {
+        Scenario scenario = scenarioRepository.findById(scenarioId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "A szituáció nem található."
+                ));
+
+        ScenarioCategory category = scenarioCategoryRepository.findByName(request.getCategoryName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "A megadott kategória nem található."
+                ));
+
+        List<EmergencyUnit> selectedUnits = emergencyUnitRepository.findAllById(request.getSelectedUnitIds());
+
+        if (selectedUnits.size() != request.getSelectedUnitIds().size()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A kiválasztott egységek között érvénytelen azonosító szerepel."
+            );
+        }
+
+        scenario.setTitle(request.getTitle().trim());
+        scenario.setCategory(category);
+        scenario.setAudioFileName(request.getAudioFileName().trim());
+        scenario.setGeoAddress(request.getAddress().trim());
+        scenario.setExpectedNote(request.getExpectedNote().trim());
+        scenario.setUpdatedAt(LocalDateTime.now());
+
+        Scenario savedScenario = scenarioRepository.save(scenario);
+
+        scenarioRequiredUnitRepository.deleteByScenario_Id(savedScenario.getId());
+        scenarioRequiredUnitRepository.flush();
+
+        saveRequiredUnits(savedScenario, selectedUnits);
+
+        return new CreateScenarioResponse(
+                savedScenario.getId(),
+                savedScenario.getTitle(),
+                savedScenario.getCategory().getName(),
+                savedScenario.getGeoAddress(),
+                selectedUnits.size(),
+                "A szituáció sikeresen frissítve lett."
         );
     }
 
@@ -161,9 +229,19 @@ public class AdminScenarioService {
         }
 
         scenarioRequiredUnitRepository.deleteByScenario_Id(scenarioId);
+        scenarioRequiredUnitRepository.flush();
         scenarioRepository.delete(scenario);
 
         return "A szituáció sikeresen törölve lett.";
+    }
+
+    private void saveRequiredUnits(Scenario scenario, List<EmergencyUnit> selectedUnits) {
+        for (EmergencyUnit unit : selectedUnits) {
+            ScenarioRequiredUnit requiredUnit = new ScenarioRequiredUnit();
+            requiredUnit.setScenario(scenario);
+            requiredUnit.setEmergencyUnit(unit);
+            scenarioRequiredUnitRepository.save(requiredUnit);
+        }
     }
 
     private String generateScenarioId() {

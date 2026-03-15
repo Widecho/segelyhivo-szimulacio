@@ -2,6 +2,7 @@ package hu.szakdolgozat.backend.controller;
 
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioRequest;
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioResponse;
+import hu.szakdolgozat.backend.dto.scenario.ScenarioDetailsResponse;
 import hu.szakdolgozat.backend.dto.scenario.UpdateScenarioStatusRequest;
 import hu.szakdolgozat.backend.service.scenario.AdminScenarioService;
 import jakarta.validation.Valid;
@@ -26,6 +27,19 @@ public class AdminScenarioController {
             @Valid @RequestBody CreateScenarioRequest request
     ) {
         return adminScenarioService.createScenario(authentication.getName(), request);
+    }
+
+    @GetMapping("/{scenarioId}")
+    public ScenarioDetailsResponse getScenarioDetails(@PathVariable String scenarioId) {
+        return adminScenarioService.getScenarioDetails(scenarioId);
+    }
+
+    @PutMapping("/{scenarioId}")
+    public CreateScenarioResponse updateScenario(
+            @PathVariable String scenarioId,
+            @Valid @RequestBody CreateScenarioRequest request
+    ) {
+        return adminScenarioService.updateScenario(scenarioId, request);
     }
 
     @PatchMapping("/{scenarioId}/status")
