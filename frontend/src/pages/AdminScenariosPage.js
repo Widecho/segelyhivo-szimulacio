@@ -1,371 +1,133 @@
-import { useMemo, useState } from "react";
-import InfoCard from "../components/InfoCard";
-import mockScenarios from "../utils/mockScenarios";
-import mockEmergencyUnits from "../utils/mockEmergencyUnits";
-import {
-  deleteCustomScenarioById,
-  loadCustomScenarios,
-  updateCustomScenario,
-} from "../utils/scenarioStorage";
-import "../styles/auth.css";
+import { useEffect, useState } from "react";
+import { getAdminScenarios } from "../services/adminService";
+import { Link } from "react-router-dom";
 
 function AdminScenariosPage() {
-  const [selectedScenario, setSelectedScenario] = useState(null);
-  const [editingScenario, setEditingScenario] = useState(null);
-  const [editFormData, setEditFormData] = useState({
-    title: "",
-    category: "",
-    audioFileName: "",
-    address: "",
-    expectedNote: "",
-    requiredUnits: [],
-  });
-  const [editError, setEditError] = useState("");
-  const [message, setMessage] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [scenarios, setScenarios] = useState([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const customScenarios = useMemo(() => loadCustomScenarios(), [refreshKey]);
-  const allScenarios = [...customScenarios, ...mockScenarios];
+  useEffect(() => {
+    let isMounted = true;
 
-  const isCustomScenario = (scenarioId) =>
-    customScenarios.some((scenario) => scenario.id === scenarioId);
+    async function loadScenarios() {
+      setIsLoading(true);
+      setError("");
 
-  const handleShowDetails = (scenario) => {
-    setSelectedScenario(scenario);
-    setEditingScenario(null);
-    setEditError("");
-    setMessage("");
-  };
+      try {
+        const response = await getAdminScenarios();
 
-  const handleStartEditScenario = (scenario) => {
-    if (!isCustomScenario(scenario.id)) {
-      setSelectedScenario(scenario);
-      setEditingScenario(null);
-      setEditError("");
-      setMessage("Az alap mock szituációk ebben a fázisban még nem szerkeszthetők.");
-      return;
-    }
-
-    setSelectedScenario(scenario);
-    setEditingScenario(scenario);
-    setEditFormData({
-      title: scenario.title,
-      category: scenario.category,
-      audioFileName: scenario.audioFileName,
-      address: scenario.address,
-      expectedNote: scenario.expectedNote,
-      requiredUnits: scenario.requiredUnits || [],
-    });
-    setEditError("");
-    setMessage("");
-  };
-
-  const handleDeleteScenario = (scenario) => {
-    deleteCustomScenarioById(scenario.id);
-
-    if (selectedScenario?.id === scenario.id) {
-      setSelectedScenario(null);
-    }
-
-    if (editingScenario?.id === scenario.id) {
-      setEditingScenario(null);
-      setEditError("");
-    }
-
-    setMessage(`Mock művelet: "${scenario.title}" törölve lett a saját szituációk közül.`);
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleEditChange = (event) => {
-    const { name, value } = event.target;
-
-    setEditFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleEditUnitToggle = (unitName) => {
-    setEditFormData((prev) => {
-      const alreadySelected = prev.requiredUnits.includes(unitName);
-
-      if (alreadySelected) {
-        return {
-          ...prev,
-          requiredUnits: prev.requiredUnits.filter((unit) => unit !== unitName),
-        };
+        if (isMounted) {
+          setScenarios(Array.isArray(response) ? response : []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || "Nem sikerült betölteni a szituációkat.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-
-      if (prev.requiredUnits.length >= 3) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        requiredUnits: [...prev.requiredUnits, unitName],
-      };
-    });
-
-    setEditError("");
-  };
-
-  const handleSaveEdit = (event) => {
-    event.preventDefault();
-
-    if (!editingScenario) {
-      return;
     }
 
-    if (editFormData.requiredUnits.length < 1) {
-      setEditError("Legalább egy készenléti szerv kiválasztása kötelező.");
-      return;
-    }
+    loadScenarios();
 
-    const updatedScenario = {
-      ...editingScenario,
-      title: editFormData.title,
-      category: editFormData.category,
-      audioFileName: editFormData.audioFileName,
-      address: editFormData.address,
-      expectedNote: editFormData.expectedNote,
-      requiredUnits: editFormData.requiredUnits,
+    return () => {
+      isMounted = false;
     };
-
-    updateCustomScenario(updatedScenario);
-    setSelectedScenario(updatedScenario);
-    setEditingScenario(updatedScenario);
-    setEditError("");
-    setMessage(`Mock művelet: "${updatedScenario.title}" módosításai elmentve.`);
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingScenario(null);
-    setEditError("");
-    setMessage("A szerkesztés megszakítva.");
-  };
-
-  const renderEditUnitGroup = (groupTitle, units) => (
-    <div className="form-section">
-      <h4 style={{ marginBottom: "10px" }}>{groupTitle}</h4>
-
-      <div className="checkbox-list">
-        {units.map((unit) => (
-          <label key={unit} className="checkbox-item">
-            <input
-              type="checkbox"
-              checked={editFormData.requiredUnits.includes(unit)}
-              onChange={() => handleEditUnitToggle(unit)}
-            />
-            <span>{unit}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
+  }, []);
 
   return (
     <div>
-      <h2>Szituációk kezelése</h2>
-      <p>
-        Itt jelenik meg az összes létrehozott szituáció. Később innen lehet majd
-        részletesen megnyitni, szerkeszteni és ellenőrizni őket.
-      </p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2>Szituációk</h2>
+          <p>Itt láthatók a backendből betöltött szituációk.</p>
+        </div>
 
-      {message && (
-        <div
+        <Link
+          to="/admin/scenarios/new"
           style={{
-            marginTop: "16px",
-            marginBottom: "20px",
-            padding: "12px 16px",
-            borderRadius: "10px",
-            backgroundColor: "#eef4fb",
-            border: "1px solid #c9d9ee",
+            display: "inline-block",
+            padding: "10px 14px",
+            backgroundColor: "#1f3c88",
+            color: "#fff",
+            textDecoration: "none",
+            borderRadius: "8px",
+            fontWeight: 600,
           }}
         >
-          {message}
-        </div>
-      )}
-
-      {selectedScenario && (
-        <div
-          style={{
-            marginTop: "16px",
-            marginBottom: "20px",
-            padding: "16px",
-            borderRadius: "12px",
-            backgroundColor: "#f8f8f8",
-            border: "1px solid #dddddd",
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>Kiválasztott szituáció</h3>
-          <p><strong>Azonosító:</strong> {selectedScenario.id}</p>
-          <p><strong>Cím:</strong> {selectedScenario.title}</p>
-          <p><strong>Kategória:</strong> {selectedScenario.category}</p>
-          <p><strong>Hanganyag:</strong> {selectedScenario.audioFileName}</p>
-          <p><strong>Cím / helyszín:</strong> {selectedScenario.address}</p>
-          <p><strong>Elvárt jegyzet:</strong> {selectedScenario.expectedNote}</p>
-          <p>
-            <strong>Elvárt készenléti szervek:</strong>{" "}
-            {selectedScenario.requiredUnits.join(", ")}
-          </p>
-        </div>
-      )}
-
-      {editingScenario && (
-        <div
-          style={{
-            marginTop: "16px",
-            marginBottom: "24px",
-            padding: "16px",
-            borderRadius: "12px",
-            backgroundColor: "#ffffff",
-            border: "1px solid #dcdcdc",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>Saját mock szituáció szerkesztése</h3>
-
-          <form className="auth-form" onSubmit={handleSaveEdit}>
-            <div className="auth-form-group">
-              <label htmlFor="title">Cím</label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                value={editFormData.title}
-                onChange={handleEditChange}
-              />
-            </div>
-
-            <div className="auth-form-group">
-              <label htmlFor="category">Kategória</label>
-              <input
-                id="category"
-                name="category"
-                type="text"
-                value={editFormData.category}
-                onChange={handleEditChange}
-              />
-            </div>
-
-            <div className="auth-form-group">
-              <label htmlFor="audioFileName">Hanganyag</label>
-              <input
-                id="audioFileName"
-                name="audioFileName"
-                type="text"
-                value={editFormData.audioFileName}
-                onChange={handleEditChange}
-              />
-            </div>
-
-            <div className="auth-form-group">
-              <label htmlFor="address">Helyszín</label>
-              <input
-                id="address"
-                name="address"
-                type="text"
-                value={editFormData.address}
-                onChange={handleEditChange}
-              />
-            </div>
-
-            <div className="auth-form-group">
-              <label htmlFor="expectedNote">Elvárt jegyzet</label>
-              <textarea
-                id="expectedNote"
-                name="expectedNote"
-                rows="5"
-                value={editFormData.expectedNote}
-                onChange={handleEditChange}
-                style={{ resize: "vertical" }}
-              />
-            </div>
-
-            <div className="form-section">
-              <h3 style={{ marginBottom: "8px" }}>Elvárt készenléti szervek</h3>
-              <p className="auth-helper-text">
-                Minimum 1, maximum 3 egység választható ki.
-              </p>
-            </div>
-
-            {renderEditUnitGroup("Tűzoltóság", mockEmergencyUnits.fire)}
-            {renderEditUnitGroup("Mentőszolgálat", mockEmergencyUnits.ambulance)}
-            {renderEditUnitGroup("Rendőrség", mockEmergencyUnits.police)}
-
-            {editError && (
-              <p className="auth-error" style={{ marginTop: "10px" }}>
-                {editError}
-              </p>
-            )}
-
-            <div className="admin-action-row">
-              <button type="submit" className="auth-form-button">
-                Módosítások mentése
-              </button>
-
-              <button
-                type="button"
-                className="admin-action-button"
-                onClick={handleCancelEdit}
-              >
-                Mégse
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div style={{ marginTop: "24px" }}>
-        {allScenarios.map((scenario) => {
-          const custom = isCustomScenario(scenario.id);
-
-          return (
-            <InfoCard
-              key={scenario.id}
-              title={`${scenario.title} (${scenario.category})`}
-              footer={
-                <div className="admin-action-row">
-                  <button
-                    type="button"
-                    className="admin-action-button"
-                    onClick={() => handleShowDetails(scenario)}
-                  >
-                    Részletek
-                  </button>
-
-                  <button
-                    type="button"
-                    className="admin-action-button"
-                    onClick={() => handleStartEditScenario(scenario)}
-                  >
-                    Szerkesztés
-                  </button>
-
-                  {custom && (
-                    <button
-                      type="button"
-                      className="admin-action-button"
-                      onClick={() => handleDeleteScenario(scenario)}
-                    >
-                      Törlés
-                    </button>
-                  )}
-                </div>
-              }
-            >
-              <p><strong>Azonosító:</strong> {scenario.id}</p>
-              <p><strong>Hanganyag:</strong> {scenario.audioFileName}</p>
-              <p><strong>Helyszín:</strong> {scenario.address}</p>
-              <p>
-                <strong>Típus:</strong>{" "}
-                {custom ? "Saját létrehozott mock szituáció" : "Alap mock szituáció"}
-              </p>
-            </InfoCard>
-          );
-        })}
+          Új szituáció
+        </Link>
       </div>
+
+      {isLoading && <p>Betöltés...</p>}
+      {error && <p style={{ color: "crimson" }}>{error}</p>}
+
+      {!isLoading && !error && scenarios.length === 0 && (
+        <p>Jelenleg nincs megjeleníthető szituáció.</p>
+      )}
+
+      {!isLoading && !error && scenarios.length > 0 && (
+        <div
+          style={{
+            marginTop: "20px",
+            display: "grid",
+            gap: "14px",
+          }}
+        >
+          {scenarios.map((scenario) => (
+            <div
+              key={scenario.id}
+              style={{
+                border: "1px solid #d9d9d9",
+                borderRadius: "12px",
+                padding: "16px",
+                backgroundColor: "#fff",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+              }}
+            >
+              <h3 style={{ marginTop: 0, marginBottom: "10px" }}>
+                {scenario.title}
+              </h3>
+
+              <p style={{ margin: "4px 0" }}>
+                <strong>Azonosító:</strong> {scenario.id}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Kategória:</strong> {scenario.category}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Helyszín:</strong> {scenario.geoAddress}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Hangfájl:</strong> {scenario.audioFileName}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Létrehozó:</strong> {scenario.createdBy}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Aktív:</strong> {scenario.isActive ? "Igen" : "Nem"}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Elvárt egységek száma:</strong> {scenario.requiredUnitCount}
+              </p>
+              <p style={{ margin: "10px 0 0 0" }}>
+                <strong>Elvárt jegyzet:</strong> {scenario.expectedNote}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

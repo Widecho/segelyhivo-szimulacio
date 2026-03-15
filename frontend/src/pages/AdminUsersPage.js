@@ -1,139 +1,99 @@
-import { useState } from "react";
-import InfoCard from "../components/InfoCard";
-import mockUsers from "../utils/mockUsers";
-import { loadLatestSimulationResult } from "../utils/simulationResultStorage";
-import "../styles/auth.css";
+import { useEffect, useState } from "react";
+import { getAdminUsers } from "../services/adminService";
 
 function AdminUsersPage() {
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [message, setMessage] = useState("");
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const latestResult = loadLatestSimulationResult();
+  useEffect(() => {
+    let isMounted = true;
 
-  const latestActiveUser = latestResult
-    ? {
-        id: "LATEST-USER",
-        fullName: latestResult.callerName || "Mock felhasználó",
-        username: "mock.user",
-        role: "USER",
-        completedScenarios: 1,
-        lastScenarioTitle: latestResult.title,
-        lastScenarioDate: latestResult.date,
-        lastScenarioScore: latestResult.score,
+    async function loadUsers() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const response = await getAdminUsers();
+
+        if (isMounted) {
+          setUsers(Array.isArray(response) ? response : []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || "Nem sikerült betölteni a felhasználókat.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    : null;
+    }
 
-  const handleShowDetails = (user) => {
-    setSelectedUser(user);
-    setMessage("");
-  };
+    loadUsers();
 
-  const handleResetPassword = (user) => {
-    setSelectedUser(user);
-    setMessage(
-      `Mock művelet: ${user.fullName} jelszava visszaállítva az alapértelmezett Abc123 értékre.`
-    );
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div>
       <h2>Felhasználók kezelése</h2>
-      <p>
-        Itt jelennek meg a rendszer felhasználói. Később innen lehet majd
-        jelszót visszaállítani és a részletes adatokat megtekinteni.
-      </p>
+      <p>Itt láthatók a rendszerben szereplő felhasználók.</p>
 
-      {latestActiveUser && (
-        <div style={{ marginTop: "24px", marginBottom: "28px" }}>
-          <h3>Legutóbb aktív felhasználó</h3>
+      {isLoading && <p>Betöltés...</p>}
+      {error && <p style={{ color: "crimson" }}>{error}</p>}
 
-          <InfoCard
-            title={`${latestActiveUser.fullName} (${latestActiveUser.role})`}
-          >
-            <p><strong>Felhasználónév:</strong> {latestActiveUser.username}</p>
-            <p>
-              <strong>Utolsó szituáció:</strong> {latestActiveUser.lastScenarioTitle}
-            </p>
-            <p>
-              <strong>Utolsó teljesítés ideje:</strong> {latestActiveUser.lastScenarioDate}
-            </p>
-            <p>
-              <strong>Utolsó pontszám:</strong> {latestActiveUser.lastScenarioScore}%
-            </p>
-          </InfoCard>
-        </div>
+      {!isLoading && !error && users.length === 0 && (
+        <p>Jelenleg nincs megjeleníthető felhasználó.</p>
       )}
 
-      {message && (
+      {!isLoading && !error && users.length > 0 && (
         <div
           style={{
-            marginTop: "16px",
-            marginBottom: "20px",
-            padding: "12px 16px",
-            borderRadius: "10px",
-            backgroundColor: "#eef7ee",
-            border: "1px solid #cfe6cf",
+            marginTop: "20px",
+            display: "grid",
+            gap: "14px",
           }}
         >
-          {message}
+          {users.map((user) => (
+            <div
+              key={user.id}
+              style={{
+                border: "1px solid #d9d9d9",
+                borderRadius: "12px",
+                padding: "16px",
+                backgroundColor: "#fff",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+              }}
+            >
+              <h3 style={{ marginTop: 0, marginBottom: "10px" }}>
+                {user.fullName}
+              </h3>
+
+              <p style={{ margin: "4px 0" }}>
+                <strong>Felhasználónév:</strong> {user.username}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Szerepkör:</strong> {user.role}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Aktív:</strong> {user.isActive ? "Igen" : "Nem"}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Hibás belépések:</strong> {user.failedLoginAttempts}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Létrehozva:</strong> {user.createdAt || "-"}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Frissítve:</strong> {user.updatedAt || "-"}
+              </p>
+            </div>
+          ))}
         </div>
       )}
-
-      {selectedUser && (
-        <div
-          style={{
-            marginTop: "16px",
-            marginBottom: "20px",
-            padding: "16px",
-            borderRadius: "12px",
-            backgroundColor: "#f8f8f8",
-            border: "1px solid #dddddd",
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>Kiválasztott felhasználó</h3>
-          <p><strong>Teljes név:</strong> {selectedUser.fullName}</p>
-          <p><strong>Felhasználónév:</strong> {selectedUser.username}</p>
-          <p><strong>Szerepkör:</strong> {selectedUser.role}</p>
-          <p>
-            <strong>Teljesített szituációk száma:</strong>{" "}
-            {selectedUser.completedScenarios}
-          </p>
-        </div>
-      )}
-
-      <div style={{ marginTop: "24px" }}>
-        {mockUsers.map((user) => (
-          <InfoCard
-            key={user.id}
-            title={`${user.fullName} (${user.role})`}
-            footer={
-              <div className="admin-action-row">
-                <button
-                  type="button"
-                  className="admin-action-button"
-                  onClick={() => handleShowDetails(user)}
-                >
-                  Részletek
-                </button>
-
-                <button
-                  type="button"
-                  className="admin-action-button"
-                  onClick={() => handleResetPassword(user)}
-                >
-                  Jelszó visszaállítása
-                </button>
-              </div>
-            }
-          >
-            <p><strong>Felhasználónév:</strong> {user.username}</p>
-            <p>
-              <strong>Teljesített szituációk száma:</strong>{" "}
-              {user.completedScenarios}
-            </p>
-          </InfoCard>
-        ))}
-      </div>
     </div>
   );
 }
