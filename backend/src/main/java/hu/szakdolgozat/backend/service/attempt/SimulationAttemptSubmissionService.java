@@ -86,17 +86,28 @@ public class SimulationAttemptSubmissionService {
             );
         }
 
-        int matchedUnitCount = (int) selectedUnitIds.stream()
-                .filter(expectedUnitIds::contains)
-                .count();
+        List<String> matchedUnits = selectedUnits.stream()
+                .filter(unit -> expectedUnitIds.contains(unit.getId()))
+                .map(EmergencyUnit::getDisplayName)
+                .sorted()
+                .toList();
 
-        int missingUnitCount = (int) expectedUnitIds.stream()
-                .filter(expectedId -> !selectedUnitIds.contains(expectedId))
-                .count();
+        List<String> incorrectUnits = selectedUnits.stream()
+                .filter(unit -> !expectedUnitIds.contains(unit.getId()))
+                .map(EmergencyUnit::getDisplayName)
+                .sorted()
+                .toList();
 
-        int incorrectUnitCount = (int) selectedUnitIds.stream()
-                .filter(selectedId -> !expectedUnitIds.contains(selectedId))
-                .count();
+        List<String> missingUnits = requiredUnits.stream()
+                .map(ScenarioRequiredUnit::getEmergencyUnit)
+                .filter(unit -> !selectedUnitIds.contains(unit.getId()))
+                .map(EmergencyUnit::getDisplayName)
+                .sorted()
+                .toList();
+
+        int matchedUnitCount = matchedUnits.size();
+        int missingUnitCount = missingUnits.size();
+        int incorrectUnitCount = incorrectUnits.size();
 
         int score = Math.max(
                 0,
@@ -158,7 +169,10 @@ public class SimulationAttemptSubmissionService {
                 missingUnitCount,
                 incorrectUnitCount,
                 noteEvaluationStatus,
-                evaluatorSummary
+                evaluatorSummary,
+                matchedUnits,
+                missingUnits,
+                incorrectUnits
         );
     }
 

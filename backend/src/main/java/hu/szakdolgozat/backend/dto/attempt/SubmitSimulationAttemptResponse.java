@@ -3,6 +3,8 @@ package hu.szakdolgozat.backend.dto.attempt;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 @AllArgsConstructor
 public class SubmitSimulationAttemptResponse {
@@ -15,4 +17,7 @@ public class SubmitSimulationAttemptResponse {
     private Integer incorrectUnitCount;
     private String noteEvaluationStatus;
     private String evaluatorSummary;
+    private List<String> matchedUnits;
+    private List<String> missingUnits;
+    private List<String> incorrectUnits;
 }

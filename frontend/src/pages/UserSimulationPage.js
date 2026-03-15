@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
-import mockScenarios from "../utils/mockScenarios";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
-import { loadLatestCustomScenario } from "../utils/scenarioStorage";
 import { submitSimulationAttempt } from "../services/userService";
+import { getCurrentSimulationScenario, getSimulationUnits } from "../services/simulationService";
 import SimulationHeader from "../components/simulation/SimulationHeader";
 import SimulationCallPanel from "../components/simulation/SimulationCallPanel";
 import SimulationFormPanel from "../components/simulation/SimulationFormPanel";
@@ -15,12 +14,29 @@ import SimulationMapPanel from "../components/simulation/SimulationMapPanel";
 import "../styles/auth.css";
 import "../styles/simulation.css";
 
+const fallbackScenario = {
+  id: "112202603120000000001",
+  title: "Bejövő segélyhívás kezelése",
+  category: "Tűzeset",
+  address: "3300 Eger, Leányka utca 4.",
+  audioFileName: "tuzeset_01.mp3",
+};
+
 function UserSimulationPage() {
   const navigate = useNavigate();
 
-  const activeScenario = useMemo(() => {
-    return mockScenarios[0];
-  }, []);
+  const [activeScenario, setActiveScenario] = useState(fallbackScenario);
+  const [availableUnits, setAvailableUnits] = useState(mockEmergencyUnits);
+  const [dataLoadMessage, setDataLoadMessage] = useState("");
+
+  const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
+  const [callState, setCallState] = useState("IDLE");
+  const [simulationStep, setSimulationStep] = useState("FORM");
+  const [selectedUnits, setSelectedUnits] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [message, setMessage] = useState("");
+  const [evaluationResult, setEvaluationResult] = useState(null);
+  const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false);
 
   const initialFormData = useMemo(
     () => ({
@@ -33,38 +49,76 @@ function UserSimulationPage() {
     [activeScenario]
   );
 
-  const [availabilityStatus, setAvailabilityStatus] = useState("NOT_READY");
-  const [callState, setCallState] = useState("IDLE");
-  const [simulationStep, setSimulationStep] = useState("FORM");
   const [formData, setFormData] = useState(initialFormData);
-  const [selectedUnits, setSelectedUnits] = useState([]);
-  const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState("");
-  const [evaluationResult, setEvaluationResult] = useState(null);
-  const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false);
 
-  const expectedUnits = activeScenario?.requiredUnits || [
-    "Heves Tűzoltóság",
-    "Heves Mentőszolgálat",
-    "Heves Rendőrség",
-  ];
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      location: activeScenario?.address || "",
+    }));
+  }, [activeScenario]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSimulationData() {
+      try {
+        const [scenarioResponse, unitsResponse] = await Promise.all([
+          getCurrentSimulationScenario(),
+          getSimulationUnits(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setActiveScenario({
+          id: scenarioResponse.id,
+          title: scenarioResponse.title,
+          category: scenarioResponse.category,
+          address: scenarioResponse.address,
+          audioFileName: scenarioResponse.audioFileName,
+        });
+
+        setAvailableUnits({
+          fire: Array.isArray(unitsResponse?.fire) ? unitsResponse.fire : [],
+          ambulance: Array.isArray(unitsResponse?.ambulance) ? unitsResponse.ambulance : [],
+          police: Array.isArray(unitsResponse?.police) ? unitsResponse.police : [],
+        });
+
+        setDataLoadMessage("");
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+
+        setDataLoadMessage(
+          "A szituációs adatok most nem érhetők el backendről, ezért az oldal tartalék adatokkal működik."
+        );
+      }
+    }
+
+    loadSimulationData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const availabilityLabel =
     availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
-
-  const selectedUnitNames = selectedUnits.map((unit) => unit.name);
-
-  const matchedUnits = selectedUnitNames.filter((unit) =>
-    expectedUnits.includes(unit)
-  );
-  const missingUnits = expectedUnits.filter((unit) => !selectedUnitNames.includes(unit));
-  const incorrectUnits = selectedUnitNames.filter((unit) => !expectedUnits.includes(unit));
 
   const resetSimulationState = (availability = "NOT_READY", call = "IDLE") => {
     setAvailabilityStatus(availability);
     setCallState(call);
     setSimulationStep("FORM");
-    setFormData(initialFormData);
+    setFormData({
+      callerName: "",
+      callerPhone: "",
+      location: activeScenario?.address || "",
+      eventDescription: "",
+      note: "",
+    });
     setSelectedUnits([]);
     setErrors({});
     setMessage("");
@@ -192,7 +246,7 @@ function UserSimulationPage() {
 
     try {
       const response = await submitSimulationAttempt({
-        scenarioId: activeScenario?.id,
+        scenarioId: activeScenario.id,
         callerName: formData.callerName,
         callerPhone: formData.callerPhone,
         locationText: formData.location,
@@ -203,15 +257,15 @@ function UserSimulationPage() {
 
       const resultPayload = {
         id: response.attemptId,
-        scenarioId: activeScenario?.id || "MOCK-SCENARIO",
-        title: formData.eventDescription || activeScenario?.title || "Mock szituáció",
+        scenarioId: activeScenario.id,
+        title: activeScenario.title,
         date: new Date().toLocaleString("hu-HU"),
         location: formData.location,
         callerName: formData.callerName,
         selectedUnits: selectedUnits.map((unit) => unit.name),
-        matchedUnits,
-        missingUnits,
-        incorrectUnits,
+        matchedUnits: response.matchedUnits || [],
+        missingUnits: response.missingUnits || [],
+        incorrectUnits: response.incorrectUnits || [],
         score: response.score,
         status: response.evaluationStatus,
       };
@@ -262,7 +316,7 @@ function UserSimulationPage() {
       return (
         <>
           <SimulationUnitsPanel
-            units={mockEmergencyUnits}
+            units={availableUnits}
             selectedUnits={selectedUnits}
             onToggleUnit={handleUnitToggle}
             onSubmitUnits={handleSubmitUnits}
@@ -278,9 +332,9 @@ function UserSimulationPage() {
 
     return (
       <SimulationEvaluationPanel
-        matchedUnits={matchedUnits}
-        missingUnits={missingUnits}
-        incorrectUnits={incorrectUnits}
+        matchedUnits={evaluationResult?.matchedUnits || []}
+        missingUnits={evaluationResult?.missingUnits || []}
+        incorrectUnits={evaluationResult?.incorrectUnits || []}
         evaluationStatus={evaluationResult?.evaluationStatus}
         score={evaluationResult?.score}
         noteEvaluationStatus={evaluationResult?.noteEvaluationStatus}
@@ -308,7 +362,7 @@ function UserSimulationPage() {
       <SimulationHeader
         availabilityLabel={availabilityLabel}
         isAvailable={availabilityStatus === "AVAILABLE"}
-        scenarioTitle="Bejövő segélyhívás kezelése"
+        scenarioTitle={activeScenario?.title || "Bejövő segélyhívás kezelése"}
       />
 
       <div className="simulation-main-grid">
@@ -324,9 +378,14 @@ function UserSimulationPage() {
           <div className="simulation-panel simulation-stage-panel">
             <h3>{getStageTitle()}</h3>
 
+            {dataLoadMessage && (
+              <div className="simulation-highlight" style={{ marginBottom: "12px" }}>
+                <p>{dataLoadMessage}</p>
+              </div>
+            )}
+
             <div className="simulation-stage-content">
               {renderStageContent()}
-
               {message && <div className="form-message">{message}</div>}
             </div>
           </div>
