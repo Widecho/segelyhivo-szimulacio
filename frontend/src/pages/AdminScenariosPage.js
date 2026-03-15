@@ -1,42 +1,61 @@
 import { useEffect, useState } from "react";
-import { getAdminScenarios } from "../services/adminService";
+import { getAdminScenarios, updateAdminScenarioStatus } from "../services/adminService";
 import { Link } from "react-router-dom";
+
+function actionButtonStyle(backgroundColor) {
+  return {
+    display: "inline-block",
+    padding: "8px 12px",
+    backgroundColor,
+    color: "#fff",
+    textDecoration: "none",
+    borderRadius: "8px",
+    fontWeight: 600,
+    border: "none",
+    cursor: "pointer",
+  };
+}
 
 function AdminScenariosPage() {
   const [scenarios, setScenarios] = useState([]);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [updatingScenarioId, setUpdatingScenarioId] = useState("");
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadScenarios() {
-      setIsLoading(true);
-      setError("");
-
-      try {
-        const response = await getAdminScenarios();
-
-        if (isMounted) {
-          setScenarios(Array.isArray(response) ? response : []);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err.message || "Nem sikerült betölteni a szituációkat.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
     loadScenarios();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  async function loadScenarios() {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await getAdminScenarios();
+      setScenarios(Array.isArray(response) ? response : []);
+    } catch (err) {
+      setError(err.message || "Nem sikerült betölteni a szituációkat.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleStatusChange(scenarioId, nextStatus) {
+    setUpdatingScenarioId(scenarioId);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await updateAdminScenarioStatus(scenarioId, nextStatus);
+      setMessage(response.message || "A szituáció állapota frissült.");
+      await loadScenarios();
+    } catch (err) {
+      setError(err.message || "Nem sikerült frissíteni a szituáció állapotát.");
+    } finally {
+      setUpdatingScenarioId("");
+    }
+  }
 
   return (
     <div>
@@ -70,6 +89,7 @@ function AdminScenariosPage() {
         </Link>
       </div>
 
+      {message && <p style={{ color: "green" }}>{message}</p>}
       {isLoading && <p>Betöltés...</p>}
       {error && <p style={{ color: "crimson" }}>{error}</p>}
 
@@ -124,6 +144,35 @@ function AdminScenariosPage() {
               <p style={{ margin: "10px 0 0 0" }}>
                 <strong>Elvárt jegyzet:</strong> {scenario.expectedNote}
               </p>
+
+              <div
+                style={{
+                  marginTop: "14px",
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {scenario.isActive ? (
+                  <button
+                    type="button"
+                    style={actionButtonStyle("#b42318")}
+                    disabled={updatingScenarioId === scenario.id}
+                    onClick={() => handleStatusChange(scenario.id, false)}
+                  >
+                    {updatingScenarioId === scenario.id ? "Mentés..." : "Inaktiválás"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    style={actionButtonStyle("#137333")}
+                    disabled={updatingScenarioId === scenario.id}
+                    onClick={() => handleStatusChange(scenario.id, true)}
+                  >
+                    {updatingScenarioId === scenario.id ? "Mentés..." : "Aktiválás"}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

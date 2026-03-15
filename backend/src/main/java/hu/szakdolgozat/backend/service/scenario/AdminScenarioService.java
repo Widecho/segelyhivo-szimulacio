@@ -2,6 +2,7 @@ package hu.szakdolgozat.backend.service.scenario;
 
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioRequest;
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioResponse;
+import hu.szakdolgozat.backend.dto.scenario.UpdateScenarioStatusRequest;
 import hu.szakdolgozat.backend.entity.AppUser;
 import hu.szakdolgozat.backend.entity.EmergencyUnit;
 import hu.szakdolgozat.backend.entity.Scenario;
@@ -101,6 +102,40 @@ public class AdminScenarioService {
                 savedScenario.getGeoAddress(),
                 selectedUnits.size(),
                 "A szituáció sikeresen létrejött."
+        );
+    }
+
+    @Transactional
+    public CreateScenarioResponse updateScenarioStatus(String scenarioId, UpdateScenarioStatusRequest request) {
+        if (request.getIsActive() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Az isActive mező megadása kötelező."
+            );
+        }
+
+        Scenario scenario = scenarioRepository.findById(scenarioId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "A szituáció nem található."
+                ));
+
+        scenario.setIsActive(request.getIsActive());
+        scenario.setUpdatedAt(LocalDateTime.now());
+
+        Scenario savedScenario = scenarioRepository.save(scenario);
+
+        long requiredUnitCount = scenarioRequiredUnitRepository.countByScenario_Id(savedScenario.getId());
+
+        return new CreateScenarioResponse(
+                savedScenario.getId(),
+                savedScenario.getTitle(),
+                savedScenario.getCategory().getName(),
+                savedScenario.getGeoAddress(),
+                (int) requiredUnitCount,
+                savedScenario.getIsActive()
+                        ? "A szituáció aktiválása sikeres."
+                        : "A szituáció inaktiválása sikeres."
         );
     }
 

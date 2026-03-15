@@ -24,3 +24,10 @@ export async function createAdminScenario(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function updateAdminScenarioStatus(scenarioId, isActive) {
+  return apiRequest(`/admin/scenarios/${scenarioId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ isActive }),
+  });
+}

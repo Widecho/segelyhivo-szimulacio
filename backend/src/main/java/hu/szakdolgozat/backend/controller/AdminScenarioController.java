@@ -2,6 +2,7 @@ package hu.szakdolgozat.backend.controller;
 
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioRequest;
 import hu.szakdolgozat.backend.dto.scenario.CreateScenarioResponse;
+import hu.szakdolgozat.backend.dto.scenario.UpdateScenarioStatusRequest;
 import hu.szakdolgozat.backend.service.scenario.AdminScenarioService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
@@ -23,5 +24,13 @@ public class AdminScenarioController {
             @Valid @RequestBody CreateScenarioRequest request
     ) {
         return adminScenarioService.createScenario(authentication.getName(), request);
+    }
+
+    @PatchMapping("/{scenarioId}/status")
+    public CreateScenarioResponse updateScenarioStatus(
+            @PathVariable String scenarioId,
+            @RequestBody UpdateScenarioStatusRequest request
+    ) {
+        return adminScenarioService.updateScenarioStatus(scenarioId, request);
     }
 }
