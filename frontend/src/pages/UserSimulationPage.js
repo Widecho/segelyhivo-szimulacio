@@ -12,7 +12,6 @@ import {
   searchLocations,
 } from "../services/geocodingService";
 import SimulationHeader from "../components/simulation/SimulationHeader";
-import SimulationCallPanel from "../components/simulation/SimulationCallPanel";
 import SimulationFormPanel from "../components/simulation/SimulationFormPanel";
 import SimulationUnitsPanel from "../components/simulation/SimulationUnitsPanel";
 import SimulationEvaluationPanel from "../components/simulation/SimulationEvaluationPanel";
@@ -45,6 +44,32 @@ function formatCoordinates(lat, lon) {
   return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
 }
 
+function modalBackdropStyle() {
+  return {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "20px",
+  };
+}
+
+function modalCardStyle(width = "720px") {
+  return {
+    width: "100%",
+    maxWidth: width,
+    maxHeight: "94vh",
+    overflow: "auto",
+    backgroundColor: "#fff",
+    borderRadius: "16px",
+    padding: "18px",
+    boxShadow: "0 20px 50px rgba(15, 23, 42, 0.22)",
+  };
+}
+
 function UserSimulationPage() {
   const navigate = useNavigate();
 
@@ -62,6 +87,9 @@ function UserSimulationPage() {
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false);
   const [isReloadingScenario, setIsReloadingScenario] = useState(false);
+
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [isUnitsModalOpen, setIsUnitsModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     callerName: "",
@@ -99,6 +127,8 @@ function UserSimulationPage() {
     setMessage("");
     setEvaluationResult(null);
     setIsSubmittingAttempt(false);
+    setIsCallModalOpen(false);
+    setIsUnitsModalOpen(false);
   }, []);
 
   const applyChosenLocation = useCallback((locationItem, infoMessage = "") => {
@@ -152,16 +182,12 @@ function UserSimulationPage() {
       setAvailableUnits(nextUnits);
       setScenarioCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
       setDataLoadMessage("");
-
-      return nextScenario;
     } catch (err) {
       setAvailableUnits(mockEmergencyUnits);
       setScenarioCategories([]);
       setDataLoadMessage(
         "A szituációs adatok most nem érhetők el backendről, ezért az oldal tartalék adatokkal működik."
       );
-
-      return fallbackScenario;
     }
   }, []);
 
@@ -331,22 +357,25 @@ function UserSimulationPage() {
   };
 
   const handleSetAvailable = () => {
-    resetSimulationState("AVAILABLE", "WAITING");
+    setAvailabilityStatus("AVAILABLE");
+    if (callState === "IDLE") {
+      setCallState("WAITING");
+    }
   };
 
   const handleSetUnavailable = () => {
     resetSimulationState("NOT_READY", "IDLE");
   };
 
-  const handleMockIncomingCall = () => {
-    setCallState("RINGING");
-    setMessage("");
+  const handleOpenCallModal = () => {
+    setIsCallModalOpen(true);
   };
 
   const handleAcceptCall = () => {
     setCallState("ACCEPTED");
     setSimulationStep("FORM");
     setMessage("");
+    setIsCallModalOpen(false);
   };
 
   const handleChange = (event) => {
@@ -407,6 +436,7 @@ function UserSimulationPage() {
     setErrors({});
     setMessage("");
     setSimulationStep("UNITS");
+    setIsUnitsModalOpen(true);
   };
 
   const handleUnitToggle = (unit) => {
@@ -479,6 +509,7 @@ function UserSimulationPage() {
 
       setEvaluationResult(response);
       setSimulationStep("EVALUATION");
+      setIsUnitsModalOpen(false);
     } catch (err) {
       setErrors((prev) => ({
         ...prev,
@@ -504,74 +535,6 @@ function UserSimulationPage() {
     navigate("/dashboard/user");
   };
 
-  const renderStageContent = () => {
-    if (callState !== "ACCEPTED") {
-      return (
-        <p className="simulation-note">
-          Az adatlap a hívás fogadása után válik aktívvá.
-        </p>
-      );
-    }
-
-    if (simulationStep === "FORM") {
-      return (
-        <SimulationFormPanel
-          formData={formData}
-          errors={errors}
-          onChange={handleChange}
-          onSubmit={handleSubmitSimulation}
-          selectedCoordinates={selectedCoordinates}
-          locationSearchText={locationSearchText}
-          onLocationSearchTextChange={handleLocationSearchTextChange}
-          locationSuggestions={locationSuggestions}
-          onSelectLocationSuggestion={handleSelectLocationSuggestion}
-          isSearchingLocation={isSearchingLocation}
-          coordinateInput={coordinateInput}
-          onCoordinateInputChange={handleCoordinateInputChange}
-          scenarioCategories={scenarioCategories}
-        />
-      );
-    }
-
-    if (simulationStep === "UNITS") {
-      return (
-        <>
-          <SimulationUnitsPanel
-            units={availableUnits}
-            selectedUnits={selectedUnits}
-            onToggleUnit={handleUnitToggle}
-            onSubmitUnits={handleSubmitUnits}
-            error={errors.selectedUnits}
-          />
-
-          {isSubmittingAttempt && (
-            <p style={{ marginTop: "12px" }}>Próbálkozás mentése folyamatban...</p>
-          )}
-        </>
-      );
-    }
-
-    return (
-      <>
-        <SimulationEvaluationPanel
-          matchedUnits={evaluationResult?.matchedUnits || []}
-          missingUnits={evaluationResult?.missingUnits || []}
-          incorrectUnits={evaluationResult?.incorrectUnits || []}
-          evaluationStatus={evaluationResult?.evaluationStatus}
-          score={evaluationResult?.score}
-          noteEvaluationStatus={evaluationResult?.noteEvaluationStatus}
-          evaluatorSummary={evaluationResult?.evaluatorSummary}
-          onRestart={handleRestartSimulation}
-          onBackToDashboard={handleBackToDashboard}
-        />
-
-        {isReloadingScenario && (
-          <p style={{ marginTop: "12px" }}>Új szituáció betöltése folyamatban...</p>
-        )}
-      </>
-    );
-  };
-
   const getStageTitle = () => {
     if (simulationStep === "FORM") {
       return "Bejelentési adatlap";
@@ -590,25 +553,22 @@ function UserSimulationPage() {
         availabilityLabel={availabilityLabel}
         isAvailable={availabilityStatus === "AVAILABLE"}
         scenarioTitle={activeScenario?.title || "Bejövő segélyhívás kezelése"}
+        onSetAvailable={handleSetAvailable}
+        onSetUnavailable={handleSetUnavailable}
+        onOpenCallModal={handleOpenCallModal}
+        canOpenCallModal={availabilityStatus === "AVAILABLE"}
       />
 
       <div
         className="simulation-main-grid"
         style={{
-          gridTemplateColumns: "minmax(0, 1.9fr) minmax(320px, 0.95fr)",
+          gridTemplateColumns: "minmax(0, 1.9fr) minmax(320px, 0.92fr)",
           alignItems: "start",
           gap: "14px",
+          marginTop: "14px",
         }}
       >
         <div className="simulation-left-column" style={{ minWidth: 0 }}>
-          <SimulationCallPanel
-            callState={callState}
-            onSetAvailable={handleSetAvailable}
-            onSetUnavailable={handleSetUnavailable}
-            onMockIncomingCall={handleMockIncomingCall}
-            onAcceptCall={handleAcceptCall}
-          />
-
           <div
             className="simulation-panel simulation-stage-panel"
             style={{
@@ -617,7 +577,7 @@ function UserSimulationPage() {
               overflow: "visible",
             }}
           >
-            <h3>{getStageTitle()}</h3>
+            <h3 style={{ marginTop: 0 }}>{getStageTitle()}</h3>
 
             {dataLoadMessage && (
               <div className="simulation-highlight" style={{ marginBottom: "12px" }}>
@@ -625,17 +585,48 @@ function UserSimulationPage() {
               </div>
             )}
 
-            <div
-              className="simulation-stage-content"
-              style={{
-                overflow: "visible",
-                minHeight: "auto",
-                height: "auto",
-              }}
-            >
-              {renderStageContent()}
-              {message && <div className="form-message">{message}</div>}
-            </div>
+            {callState !== "ACCEPTED" ? (
+              <p className="simulation-note">
+                A hívás fogadása után tölthető ki az adatlap.
+              </p>
+            ) : simulationStep === "EVALUATION" ? (
+              <>
+                <SimulationEvaluationPanel
+                  matchedUnits={evaluationResult?.matchedUnits || []}
+                  missingUnits={evaluationResult?.missingUnits || []}
+                  incorrectUnits={evaluationResult?.incorrectUnits || []}
+                  evaluationStatus={evaluationResult?.evaluationStatus}
+                  score={evaluationResult?.score}
+                  noteEvaluationStatus={evaluationResult?.noteEvaluationStatus}
+                  evaluatorSummary={evaluationResult?.evaluatorSummary}
+                  onRestart={handleRestartSimulation}
+                  onBackToDashboard={handleBackToDashboard}
+                />
+
+                {isReloadingScenario && (
+                  <p style={{ marginTop: "12px" }}>Új szituáció betöltése folyamatban...</p>
+                )}
+              </>
+            ) : (
+              <SimulationFormPanel
+                formData={formData}
+                errors={errors}
+                onChange={handleChange}
+                onSubmit={handleSubmitSimulation}
+                selectedCoordinates={selectedCoordinates}
+                locationSearchText={locationSearchText}
+                onLocationSearchTextChange={handleLocationSearchTextChange}
+                locationSuggestions={locationSuggestions}
+                onSelectLocationSuggestion={handleSelectLocationSuggestion}
+                isSearchingLocation={isSearchingLocation}
+                coordinateInput={coordinateInput}
+                onCoordinateInputChange={handleCoordinateInputChange}
+                scenarioCategories={scenarioCategories}
+                onOpenUnitsModal={() => setIsUnitsModalOpen(true)}
+              />
+            )}
+
+            {message && <div className="form-message">{message}</div>}
           </div>
         </div>
 
@@ -655,6 +646,69 @@ function UserSimulationPage() {
           />
         </div>
       </div>
+
+      {isCallModalOpen && (
+        <div style={modalBackdropStyle()} onClick={() => setIsCallModalOpen(false)}>
+          <div style={modalCardStyle("560px")} onClick={(event) => event.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>Bejövő hívás kezelése</h3>
+            <p style={{ color: "#475467" }}>
+              A hívás fogadásával aktiválódik az adatlap.
+            </p>
+
+            <div
+              style={{
+                marginTop: "16px",
+                display: "flex",
+                gap: "10px",
+                justifyContent: "flex-end",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsCallModalOpen(false)}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid #d0d5dd",
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Mégse
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAcceptCall}
+                className="auth-form-button"
+              >
+                Hívás fogadása
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isUnitsModalOpen && simulationStep === "UNITS" && (
+        <div style={modalBackdropStyle()} onClick={() => setIsUnitsModalOpen(false)}>
+          <div style={modalCardStyle("1560px")} onClick={(event) => event.stopPropagation()}>
+            <SimulationUnitsPanel
+              units={availableUnits}
+              selectedUnits={selectedUnits}
+              onToggleUnit={handleUnitToggle}
+              onSubmitUnits={handleSubmitUnits}
+              onClose={() => setIsUnitsModalOpen(false)}
+              error={errors.selectedUnits}
+            />
+
+            {isSubmittingAttempt && (
+              <p style={{ marginTop: "12px" }}>Próbálkozás mentése folyamatban...</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
