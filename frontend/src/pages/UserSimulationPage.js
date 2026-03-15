@@ -28,7 +28,7 @@ const fallbackScenario = {
   audioFileName: "tuzeset_01.mp3",
 };
 
-function shortenAddress(text, maxLength = 70) {
+function shortenText(text, maxLength = 70) {
   if (!text) {
     return "";
   }
@@ -65,7 +65,6 @@ function UserSimulationPage() {
     callerName: "",
     callerPhone: "",
     location: "",
-    eventDescription: "",
     note: "",
   });
 
@@ -84,7 +83,6 @@ function UserSimulationPage() {
       callerName: "",
       callerPhone: "",
       location: "",
-      eventDescription: "",
       note: "",
     });
     setSelectedCoordinates(null);
@@ -100,9 +98,12 @@ function UserSimulationPage() {
   }, []);
 
   const applyChosenLocation = useCallback((locationItem, infoMessage = "") => {
+    const formattedAddress =
+      locationItem.formattedAddress || locationItem.displayName || "";
+
     setFormData((prev) => ({
       ...prev,
-      location: locationItem.displayName,
+      location: formattedAddress,
     }));
 
     setSelectedCoordinates({
@@ -110,7 +111,7 @@ function UserSimulationPage() {
       lon: locationItem.lon,
     });
 
-    setLocationSearchText(shortenAddress(locationItem.displayName));
+    setLocationSearchText(formattedAddress);
     setCoordinateInput(formatCoordinates(locationItem.lat, locationItem.lon));
     setLocationSuggestions([]);
     setMapMessage(infoMessage || "A helyszín sikeresen kiválasztva.");
@@ -190,11 +191,7 @@ function UserSimulationPage() {
       return;
     }
 
-    if (
-      selectedCoordinates &&
-      formData.location &&
-      trimmed === shortenAddress(formData.location).trim()
-    ) {
+    if (selectedCoordinates && formData.location && trimmed === formData.location.trim()) {
       setLocationSuggestions([]);
       setIsSearchingLocation(false);
       return;
@@ -217,7 +214,10 @@ function UserSimulationPage() {
         setLocationSuggestions(
           results.map((item) => ({
             ...item,
-            shortDisplayName: shortenAddress(item.displayName, 72),
+            shortDisplayName: shortenText(
+              item.formattedAddress || item.displayName,
+              68
+            ),
           }))
         );
       } catch (err) {
@@ -225,7 +225,7 @@ function UserSimulationPage() {
       } finally {
         setIsSearchingLocation(false);
       }
-    }, 350);
+    }, 300);
 
     return () => clearTimeout(timeoutId);
   }, [locationSearchText, formData.location, selectedCoordinates, simulationStep]);
@@ -258,11 +258,14 @@ function UserSimulationPage() {
     const timeoutId = setTimeout(async () => {
       try {
         const reversed = await reverseGeocode(parsed.lat, parsed.lon);
-        applyChosenLocation(reversed, "A koordináták alapján a cím automatikusan kitöltődött.");
+        applyChosenLocation(
+          reversed,
+          "A koordináták alapján a cím automatikusan kitöltődött."
+        );
       } catch (err) {
         setMapMessage(err.message || "Nem sikerült a koordinátákhoz címet találni.");
       }
-    }, 500);
+    }, 450);
 
     return () => clearTimeout(timeoutId);
   }, [coordinateInput, selectedCoordinates, applyChosenLocation, simulationStep]);
@@ -350,6 +353,7 @@ function UserSimulationPage() {
     setErrors((prev) => ({
       ...prev,
       [name]: "",
+      location: "",
       selectedUnits: "",
     }));
 
@@ -367,16 +371,8 @@ function UserSimulationPage() {
       newErrors.callerPhone = "A telefonszám megadása kötelező.";
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = "A helyszín kiválasztása kötelező.";
-    }
-
-    if (!selectedCoordinates) {
+    if (!formData.location.trim() || !selectedCoordinates) {
       newErrors.location = "Érvényes helyszín vagy koordináta kiválasztása kötelező.";
-    }
-
-    if (!formData.eventDescription.trim()) {
-      newErrors.eventDescription = "Az esemény leírása kötelező.";
     }
 
     if (!formData.note.trim()) {
@@ -448,7 +444,7 @@ function UserSimulationPage() {
         callerName: formData.callerName,
         callerPhone: formData.callerPhone,
         locationText: formData.location,
-        eventDescription: formData.eventDescription,
+        eventDescription: formData.note,
         userNote: formData.note,
         selectedUnitIds: selectedUnits.map((unit) => unit.id),
       });
@@ -584,8 +580,15 @@ function UserSimulationPage() {
         scenarioTitle={activeScenario?.title || "Bejövő segélyhívás kezelése"}
       />
 
-      <div className="simulation-main-grid">
-        <div className="simulation-left-column">
+      <div
+        className="simulation-main-grid"
+        style={{
+          gridTemplateColumns: "minmax(0, 1.9fr) minmax(320px, 0.95fr)",
+          alignItems: "start",
+          gap: "14px",
+        }}
+      >
+        <div className="simulation-left-column" style={{ minWidth: 0 }}>
           <SimulationCallPanel
             callState={callState}
             onSetAvailable={handleSetAvailable}
@@ -594,7 +597,14 @@ function UserSimulationPage() {
             onAcceptCall={handleAcceptCall}
           />
 
-          <div className="simulation-panel simulation-stage-panel">
+          <div
+            className="simulation-panel simulation-stage-panel"
+            style={{
+              minHeight: "auto",
+              height: "auto",
+              overflow: "visible",
+            }}
+          >
             <h3>{getStageTitle()}</h3>
 
             {dataLoadMessage && (
@@ -603,14 +613,21 @@ function UserSimulationPage() {
               </div>
             )}
 
-            <div className="simulation-stage-content">
+            <div
+              className="simulation-stage-content"
+              style={{
+                overflow: "visible",
+                minHeight: "auto",
+                height: "auto",
+              }}
+            >
               {renderStageContent()}
               {message && <div className="form-message">{message}</div>}
             </div>
           </div>
         </div>
 
-        <div className="simulation-right-column">
+        <div className="simulation-right-column" style={{ minWidth: 0 }}>
           <SimulationStatusPanel
             availabilityLabel={availabilityLabel}
             callState={callState}

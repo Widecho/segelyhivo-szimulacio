@@ -64,37 +64,46 @@ function SimulationMapPanel({
     >
       <h3>Helyszín és térkép</h3>
 
-      <div style={{ display: "grid", gap: "12px", minWidth: 0 }}>
+      <div style={{ display: "grid", gap: "10px", minWidth: 0 }}>
         {mapMessage && (
           <div
             style={{
               ...boxStyle(),
               backgroundColor: "#f8fafc",
+              padding: "10px 12px",
             }}
           >
             {mapMessage}
           </div>
         )}
 
-        <div style={boxStyle()}>
+        <div style={{ ...boxStyle(), padding: "10px 12px" }}>
           <p
             style={{
               margin: "0 0 8px 0",
-              lineHeight: 1.5,
+              lineHeight: 1.45,
               wordBreak: "break-word",
+              fontSize: "14px",
             }}
           >
             <strong>Kiválasztott cím:</strong> {location || "Még nincs kiválasztva"}
           </p>
 
-          <p style={{ margin: "0 0 8px 0" }}>
+          <p style={{ margin: "0 0 8px 0", fontSize: "14px" }}>
             <strong>Koordináták:</strong>{" "}
             {selectedCoordinates
               ? `${selectedCoordinates.lat.toFixed(6)}, ${selectedCoordinates.lon.toFixed(6)}`
               : "Még nincs kiválasztva"}
           </p>
 
-          <p style={{ margin: 0, lineHeight: 1.5, wordBreak: "break-word" }}>
+          <p
+            style={{
+              margin: 0,
+              lineHeight: 1.45,
+              wordBreak: "break-word",
+              fontSize: "14px",
+            }}
+          >
             <strong>Kiválasztott egységek:</strong>{" "}
             {selectedUnits.length > 0
               ? selectedUnits.map((unit) => unit.name).join(", ")
@@ -115,7 +124,7 @@ function SimulationMapPanel({
             center={[currentCenter.lat, currentCenter.lon]}
             zoom={13}
             style={{
-              height: "320px",
+              height: "250px",
               width: "100%",
               maxWidth: "100%",
             }}
@@ -131,7 +140,7 @@ function SimulationMapPanel({
             {selectedCoordinates && (
               <CircleMarker
                 center={[selectedCoordinates.lat, selectedCoordinates.lon]}
-                radius={9}
+                radius={8}
                 pathOptions={{
                   color: "#1f3c88",
                   fillColor: "#1f3c88",

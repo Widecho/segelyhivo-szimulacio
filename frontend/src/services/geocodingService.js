@@ -1,8 +1,67 @@
 const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
 
+function firstNonEmpty(...values) {
+  return values.find((value) => typeof value === "string" && value.trim()) || "";
+}
+
+function buildCompactAddress(item) {
+  const address = item.address || {};
+
+  const postcode = firstNonEmpty(address.postcode);
+  const city = firstNonEmpty(
+    address.city,
+    address.town,
+    address.village,
+    address.municipality,
+    address.suburb
+  );
+
+  const road = firstNonEmpty(
+    address.road,
+    address.pedestrian,
+    address.footway,
+    address.cycleway,
+    address.path,
+    address.highway,
+    address.route
+  );
+
+  const houseNumber = firstNonEmpty(address.house_number);
+
+  if (postcode && city && road && houseNumber) {
+    return `${postcode} ${city}, ${road} ${houseNumber}.`;
+  }
+
+  if (postcode && city && road) {
+    return `${postcode} ${city}, ${road}`;
+  }
+
+  if (road && houseNumber) {
+    return `${road} ${houseNumber}.`;
+  }
+
+  const displayParts = String(item.display_name || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (displayParts.length >= 2) {
+    return `${displayParts[0]} ${displayParts[1]}`;
+  }
+
+  if (displayParts.length === 1) {
+    return displayParts[0];
+  }
+
+  return item.display_name || "";
+}
+
 function normalizeLocationItem(item) {
+  const formattedAddress = buildCompactAddress(item);
+
   return {
     displayName: item.display_name,
+    formattedAddress,
     lat: Number(item.lat),
     lon: Number(item.lon),
   };
@@ -18,7 +77,7 @@ export async function searchLocations(query) {
   const response = await fetch(
     `${NOMINATIM_BASE_URL}/search?format=jsonv2&q=${encodeURIComponent(
       trimmedQuery
-    )}&addressdetails=1&limit=5&countrycodes=hu`
+    )}&addressdetails=1&limit=6&countrycodes=hu`
   );
 
   if (!response.ok) {
@@ -44,6 +103,7 @@ export async function reverseGeocode(lat, lon) {
 
   return {
     displayName: data.display_name || "",
+    formattedAddress: buildCompactAddress(data),
     lat: Number(data.lat),
     lon: Number(data.lon),
   };

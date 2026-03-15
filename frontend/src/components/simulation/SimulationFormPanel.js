@@ -39,7 +39,6 @@ function SimulationFormPanel({
     callerName: "",
     callerPhone: "",
     location: "",
-    eventDescription: "",
     note: "",
   },
   errors = {},
@@ -55,7 +54,7 @@ function SimulationFormPanel({
   onCoordinateInputChange,
 }) {
   return (
-    <form onSubmit={onSubmit} style={{ display: "grid", gap: "16px" }}>
+    <form onSubmit={onSubmit} style={{ display: "grid", gap: "14px" }}>
       <div>
         <label htmlFor="callerName">Bejelentő neve</label>
         <input
@@ -100,7 +99,7 @@ function SimulationFormPanel({
         />
 
         <div style={helperStyle()}>
-          A cím írás közben OpenStreetMap alapú találatokból választható ki.
+          A helyszín írás közben OpenStreetMap alapú találatokból választható ki.
         </div>
 
         {isSearchingLocation && (
@@ -167,21 +166,6 @@ function SimulationFormPanel({
             Aktuális koordináták: {selectedCoordinates.lat.toFixed(6)},{" "}
             {selectedCoordinates.lon.toFixed(6)}
           </div>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="eventDescription">Esemény leírása</label>
-        <textarea
-          id="eventDescription"
-          name="eventDescription"
-          rows="4"
-          value={formData.eventDescription}
-          onChange={onChange}
-          style={inputStyle(Boolean(errors.eventDescription))}
-        />
-        {errors.eventDescription && (
-          <div style={fieldErrorStyle()}>{errors.eventDescription}</div>
         )}
       </div>
 
