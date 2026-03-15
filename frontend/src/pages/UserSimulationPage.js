@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "leaflet/dist/leaflet.css";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
 import { submitSimulationAttempt } from "../services/userService";
 import { getCurrentSimulationScenario, getSimulationUnits } from "../services/simulationService";
+import {
+  parseCoordinateInput,
+  reverseGeocode,
+  searchLocations,
+} from "../services/geocodingService";
 import SimulationHeader from "../components/simulation/SimulationHeader";
 import SimulationCallPanel from "../components/simulation/SimulationCallPanel";
 import SimulationFormPanel from "../components/simulation/SimulationFormPanel";
@@ -18,7 +24,7 @@ const fallbackScenario = {
   id: "112202603120000000001",
   title: "Bejövő segélyhívás kezelése",
   category: "Tűzeset",
-  address: "3300 Eger, Leányka utca 4.",
+  address: "",
   audioFileName: "tuzeset_01.mp3",
 };
 
@@ -39,39 +45,41 @@ function UserSimulationPage() {
   const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false);
   const [isReloadingScenario, setIsReloadingScenario] = useState(false);
 
-  const initialFormData = useMemo(
-    () => ({
+  const [formData, setFormData] = useState({
+    callerName: "",
+    callerPhone: "",
+    location: "",
+    eventDescription: "",
+    note: "",
+  });
+
+  const [selectedCoordinates, setSelectedCoordinates] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [mapMessage, setMapMessage] = useState("");
+
+  const resetSimulationState = useCallback((availability = "NOT_READY", call = "IDLE") => {
+    setAvailabilityStatus(availability);
+    setCallState(call);
+    setSimulationStep("FORM");
+    setFormData({
       callerName: "",
       callerPhone: "",
-      location: activeScenario?.address || "",
+      location: "",
       eventDescription: "",
       note: "",
-    }),
-    [activeScenario]
-  );
-
-  const [formData, setFormData] = useState(initialFormData);
-
-  const resetSimulationState = useCallback(
-    (availability = "NOT_READY", call = "IDLE", scenario = activeScenario) => {
-      setAvailabilityStatus(availability);
-      setCallState(call);
-      setSimulationStep("FORM");
-      setFormData({
-        callerName: "",
-        callerPhone: "",
-        location: scenario?.address || "",
-        eventDescription: "",
-        note: "",
-      });
-      setSelectedUnits([]);
-      setErrors({});
-      setMessage("");
-      setEvaluationResult(null);
-      setIsSubmittingAttempt(false);
-    },
-    [activeScenario]
-  );
+    });
+    setSelectedCoordinates(null);
+    setSearchInput("");
+    setSearchResults([]);
+    setMapMessage("");
+    setSelectedUnits([]);
+    setErrors({});
+    setMessage("");
+    setEvaluationResult(null);
+    setIsSubmittingAttempt(false);
+  }, []);
 
   const loadSimulationData = useCallback(async () => {
     try {
@@ -84,7 +92,7 @@ function UserSimulationPage() {
         id: scenarioResponse.id,
         title: scenarioResponse.title,
         category: scenarioResponse.category,
-        address: scenarioResponse.address,
+        address: "",
         audioFileName: scenarioResponse.audioFileName,
       };
 
@@ -113,19 +121,13 @@ function UserSimulationPage() {
     let isMounted = true;
 
     async function initializePage() {
-      const scenario = await loadSimulationData();
+      await loadSimulationData();
 
       if (!isMounted) {
         return;
       }
 
-      setFormData({
-        callerName: "",
-        callerPhone: "",
-        location: scenario?.address || "",
-        eventDescription: "",
-        note: "",
-      });
+      resetSimulationState();
     }
 
     initializePage();
@@ -133,10 +135,78 @@ function UserSimulationPage() {
     return () => {
       isMounted = false;
     };
-  }, [loadSimulationData]);
+  }, [loadSimulationData, resetSimulationState]);
 
   const availabilityLabel =
     availabilityStatus === "AVAILABLE" ? "Szabad" : "Nem szabad";
+
+  const applyChosenLocation = useCallback((locationItem) => {
+    setFormData((prev) => ({
+      ...prev,
+      location: locationItem.displayName,
+    }));
+
+    setSelectedCoordinates({
+      lat: locationItem.lat,
+      lon: locationItem.lon,
+    });
+
+    setSearchInput(locationItem.displayName);
+    setSearchResults([]);
+    setMapMessage("A helyszín sikeresen kiválasztva.");
+    setErrors((prev) => ({
+      ...prev,
+      location: "",
+    }));
+  }, []);
+
+  const handleSearchSubmit = async () => {
+    setMapMessage("");
+    setSearchResults([]);
+
+    const parsedCoordinates = parseCoordinateInput(searchInput);
+
+    setIsSearchingLocation(true);
+
+    try {
+      if (parsedCoordinates) {
+        const reversed = await reverseGeocode(parsedCoordinates.lat, parsedCoordinates.lon);
+        applyChosenLocation(reversed);
+        setMapMessage("A koordináták alapján a cím automatikusan kitöltődött.");
+        return;
+      }
+
+      const results = await searchLocations(searchInput);
+
+      if (results.length === 0) {
+        setMapMessage("Nem találtam megfelelő címet a megadott keresésre.");
+        return;
+      }
+
+      setSearchResults(results);
+      setMapMessage("Válassz egy találatot a listából.");
+    } catch (err) {
+      setMapMessage(err.message || "Nem sikerült helyet keresni.");
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  const handleSelectSearchResult = (result) => {
+    applyChosenLocation(result);
+  };
+
+  const handleMapRightClick = async (latlng) => {
+    setMapMessage("Új cím meghatározása a térképi pontról...");
+
+    try {
+      const reversed = await reverseGeocode(latlng.lat, latlng.lng);
+      applyChosenLocation(reversed);
+      setMapMessage("A cím áthelyezése sikeres volt.");
+    } catch (err) {
+      setMapMessage(err.message || "Nem sikerült a cím áthelyezése.");
+    }
+  };
 
   const handleSetAvailable = () => {
     resetSimulationState("AVAILABLE", "WAITING");
@@ -186,7 +256,7 @@ function UserSimulationPage() {
     }
 
     if (!formData.location.trim()) {
-      newErrors.location = "A helyszín megadása kötelező.";
+      newErrors.location = "A helyszín kiválasztása kötelező.";
     }
 
     if (!formData.eventDescription.trim()) {
@@ -301,8 +371,8 @@ function UserSimulationPage() {
     setErrors({});
     setMessage("");
 
-    const scenario = await loadSimulationData();
-    resetSimulationState("NOT_READY", "IDLE", scenario);
+    await loadSimulationData();
+    resetSimulationState("NOT_READY", "IDLE");
 
     setIsReloadingScenario(false);
   };
@@ -327,6 +397,7 @@ function UserSimulationPage() {
           errors={errors}
           onChange={handleChange}
           onSubmit={handleSubmitSimulation}
+          selectedCoordinates={selectedCoordinates}
         />
       );
     }
@@ -425,6 +496,15 @@ function UserSimulationPage() {
 
           <SimulationMapPanel
             location={formData.location}
+            selectedCoordinates={selectedCoordinates}
+            searchInput={searchInput}
+            onSearchInputChange={setSearchInput}
+            searchResults={searchResults}
+            onSearchSubmit={handleSearchSubmit}
+            onSelectSearchResult={handleSelectSearchResult}
+            onMapRightClick={handleMapRightClick}
+            isSearching={isSearchingLocation}
+            mapMessage={mapMessage}
             selectedUnits={selectedUnits}
           />
         </div>
