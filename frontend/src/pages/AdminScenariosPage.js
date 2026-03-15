@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getAdminScenarios, updateAdminScenarioStatus } from "../services/adminService";
+import {
+  deleteAdminScenario,
+  getAdminScenarios,
+  updateAdminScenarioStatus,
+} from "../services/adminService";
 import { Link } from "react-router-dom";
 
 function actionButtonStyle(backgroundColor) {
@@ -22,6 +26,7 @@ function AdminScenariosPage() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [updatingScenarioId, setUpdatingScenarioId] = useState("");
+  const [deletingScenarioId, setDeletingScenarioId] = useState("");
 
   useEffect(() => {
     loadScenarios();
@@ -54,6 +59,30 @@ function AdminScenariosPage() {
       setError(err.message || "Nem sikerült frissíteni a szituáció állapotát.");
     } finally {
       setUpdatingScenarioId("");
+    }
+  }
+
+  async function handleDelete(scenario) {
+    const confirmed = window.confirm(
+      `Biztosan törölni szeretnéd ezt a szituációt?\n\n${scenario.title}`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingScenarioId(scenario.id);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await deleteAdminScenario(scenario.id);
+      setMessage(response.message || "A szituáció törlése sikeres.");
+      await loadScenarios();
+    } catch (err) {
+      setError(err.message || "Nem sikerült törölni a szituációt.");
+    } finally {
+      setDeletingScenarioId("");
     }
   }
 
@@ -90,14 +119,14 @@ function AdminScenariosPage() {
       </div>
 
       {message && <p style={{ color: "green" }}>{message}</p>}
-      {isLoading && <p>Betöltés...</p>}
       {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {isLoading && <p>Betöltés...</p>}
 
-      {!isLoading && !error && scenarios.length === 0 && (
+      {!isLoading && scenarios.length === 0 && !error && (
         <p>Jelenleg nincs megjeleníthető szituáció.</p>
       )}
 
-      {!isLoading && !error && scenarios.length > 0 && (
+      {!isLoading && scenarios.length > 0 && (
         <div
           style={{
             marginTop: "20px",
@@ -157,7 +186,10 @@ function AdminScenariosPage() {
                   <button
                     type="button"
                     style={actionButtonStyle("#b42318")}
-                    disabled={updatingScenarioId === scenario.id}
+                    disabled={
+                      updatingScenarioId === scenario.id ||
+                      deletingScenarioId === scenario.id
+                    }
                     onClick={() => handleStatusChange(scenario.id, false)}
                   >
                     {updatingScenarioId === scenario.id ? "Mentés..." : "Inaktiválás"}
@@ -166,12 +198,27 @@ function AdminScenariosPage() {
                   <button
                     type="button"
                     style={actionButtonStyle("#137333")}
-                    disabled={updatingScenarioId === scenario.id}
+                    disabled={
+                      updatingScenarioId === scenario.id ||
+                      deletingScenarioId === scenario.id
+                    }
                     onClick={() => handleStatusChange(scenario.id, true)}
                   >
                     {updatingScenarioId === scenario.id ? "Mentés..." : "Aktiválás"}
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  style={actionButtonStyle("#8f1d1d")}
+                  disabled={
+                    updatingScenarioId === scenario.id ||
+                    deletingScenarioId === scenario.id
+                  }
+                  onClick={() => handleDelete(scenario)}
+                >
+                  {deletingScenarioId === scenario.id ? "Törlés..." : "Törlés"}
+                </button>
               </div>
             </div>
           ))}

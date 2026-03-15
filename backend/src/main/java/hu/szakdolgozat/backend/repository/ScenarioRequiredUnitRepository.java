@@ -10,4 +10,6 @@ public interface ScenarioRequiredUnitRepository extends JpaRepository<ScenarioRe
     List<ScenarioRequiredUnit> findByScenario_Id(String scenarioId);
 
     long countByScenario_Id(String scenarioId);
+
+    void deleteByScenario_Id(String scenarioId);
 }

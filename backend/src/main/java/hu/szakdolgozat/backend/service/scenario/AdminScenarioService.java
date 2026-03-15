@@ -13,6 +13,7 @@ import hu.szakdolgozat.backend.repository.EmergencyUnitRepository;
 import hu.szakdolgozat.backend.repository.ScenarioCategoryRepository;
 import hu.szakdolgozat.backend.repository.ScenarioRepository;
 import hu.szakdolgozat.backend.repository.ScenarioRequiredUnitRepository;
+import hu.szakdolgozat.backend.repository.SimulationAttemptRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,19 +35,22 @@ public class AdminScenarioService {
     private final EmergencyUnitRepository emergencyUnitRepository;
     private final ScenarioRequiredUnitRepository scenarioRequiredUnitRepository;
     private final AppUserRepository appUserRepository;
+    private final SimulationAttemptRepository simulationAttemptRepository;
 
     public AdminScenarioService(
             ScenarioRepository scenarioRepository,
             ScenarioCategoryRepository scenarioCategoryRepository,
             EmergencyUnitRepository emergencyUnitRepository,
             ScenarioRequiredUnitRepository scenarioRequiredUnitRepository,
-            AppUserRepository appUserRepository
+            AppUserRepository appUserRepository,
+            SimulationAttemptRepository simulationAttemptRepository
     ) {
         this.scenarioRepository = scenarioRepository;
         this.scenarioCategoryRepository = scenarioCategoryRepository;
         this.emergencyUnitRepository = emergencyUnitRepository;
         this.scenarioRequiredUnitRepository = scenarioRequiredUnitRepository;
         this.appUserRepository = appUserRepository;
+        this.simulationAttemptRepository = simulationAttemptRepository;
     }
 
     @Transactional
@@ -137,6 +141,29 @@ public class AdminScenarioService {
                         ? "A szituáció aktiválása sikeres."
                         : "A szituáció inaktiválása sikeres."
         );
+    }
+
+    @Transactional
+    public String deleteScenario(String scenarioId) {
+        Scenario scenario = scenarioRepository.findById(scenarioId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "A szituáció nem található."
+                ));
+
+        long attemptCount = simulationAttemptRepository.countByScenario_Id(scenarioId);
+
+        if (attemptCount > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A szituáció nem törölhető, mert már tartozik hozzá kitöltött próbálkozás. Állítsd inaktívra."
+            );
+        }
+
+        scenarioRequiredUnitRepository.deleteByScenario_Id(scenarioId);
+        scenarioRepository.delete(scenario);
+
+        return "A szituáció sikeresen törölve lett.";
     }
 
     private String generateScenarioId() {

@@ -31,3 +31,9 @@ export async function updateAdminScenarioStatus(scenarioId, isActive) {
     body: JSON.stringify({ isActive }),
   });
 }
+
+export async function deleteAdminScenario(scenarioId) {
+  return apiRequest(`/admin/scenarios/${scenarioId}`, {
+    method: "DELETE",
+  });
+}

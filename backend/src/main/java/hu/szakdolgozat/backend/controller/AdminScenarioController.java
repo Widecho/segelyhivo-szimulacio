@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/admin/scenarios")
 public class AdminScenarioController {
@@ -32,5 +34,11 @@ public class AdminScenarioController {
             @RequestBody UpdateScenarioStatusRequest request
     ) {
         return adminScenarioService.updateScenarioStatus(scenarioId, request);
+    }
+
+    @DeleteMapping("/{scenarioId}")
+    public Map<String, String> deleteScenario(@PathVariable String scenarioId) {
+        String message = adminScenarioService.deleteScenario(scenarioId);
+        return Map.of("message", message);
     }
 }

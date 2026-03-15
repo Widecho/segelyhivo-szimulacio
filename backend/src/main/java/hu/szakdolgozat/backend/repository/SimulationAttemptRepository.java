@@ -14,4 +14,6 @@ public interface SimulationAttemptRepository extends JpaRepository<SimulationAtt
     List<SimulationAttempt> findByUser_UsernameAndScenario_IdIn(String username, List<String> scenarioIds);
 
     long countByEvaluationStatus(String evaluationStatus);
+
+    long countByScenario_Id(String scenarioId);
 }
