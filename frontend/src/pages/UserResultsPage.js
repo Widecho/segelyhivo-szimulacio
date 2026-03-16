@@ -19,7 +19,7 @@ function feedbackStyle(type) {
   }
 
   return {
-    backgroundColor: "#f5faff",
+    backgroundColor: "#eff8ff",
     border: "1px solid #b2ddff",
     color: "#175cd3",
   };
@@ -63,94 +63,117 @@ function UserResultsPage() {
 
   return (
     <div>
-      <h2>Korábbi eredmények</h2>
-      <p>Itt láthatók a saját próbálkozásaid és részletes kiértékeléseid.</p>
+      <div className="page-header-row">
+        <div>
+          <h2 className="page-title">Korábbi eredmények</h2>
+          <p className="page-description">
+            Itt láthatók a saját próbálkozásaid és a részletes kiértékeléseid.
+          </p>
+        </div>
+      </div>
 
-      {isLoading && <p>Betöltés...</p>}
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {isLoading && <div className="loading-message">Betöltés...</div>}
+      {error && <div className="error-message">{error}</div>}
 
       {!isLoading && !error && attempts.length === 0 && (
-        <p>Jelenleg nincs megjeleníthető eredmény.</p>
+        <div className="empty-message">Jelenleg nincs megjeleníthető eredmény.</div>
       )}
 
       {!isLoading && !error && attempts.length > 0 && (
-        <div
-          style={{
-            marginTop: "20px",
-            display: "grid",
-            gap: "14px",
-          }}
-        >
+        <div className="card-grid two-col">
           {attempts.map((attempt) => (
-            <div
-              key={attempt.id}
-              style={{
-                border: "1px solid #d9d9d9",
-                borderRadius: "12px",
-                padding: "16px",
-                backgroundColor: "#fff",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-              }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: "10px" }}>
-                {attempt.scenarioTitle}
-              </h3>
+            <div key={attempt.id} className="panel-card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                  marginBottom: "12px",
+                }}
+              >
+                <h3 style={{ margin: 0 }}>{attempt.scenarioTitle}</h3>
+                <span className="badge active">{attempt.evaluationStatus || "Értékelt"}</span>
+              </div>
 
-              <p style={{ margin: "4px 0" }}>
-                <strong>Bejelentő neve:</strong> {attempt.callerName}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Telefonszám:</strong> {attempt.callerPhone}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Helyszín:</strong> {attempt.locationText}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Esemény:</strong> {attempt.eventDescription}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Értékelés:</strong> {attempt.evaluationStatus}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Pontszám:</strong> {attempt.score}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Talált egységek:</strong> {attempt.matchedUnitCount}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Hiányzó egységek:</strong> {attempt.missingUnitCount}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Hibás egységek:</strong> {attempt.incorrectUnitCount}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Jegyzetellenőrzés:</strong> {attempt.noteEvaluationStatus || "-"}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Kezdés:</strong> {attempt.startedAt || "-"}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Beküldés:</strong> {attempt.submittedAt || "-"}
-              </p>
+              <div className="data-list">
+                <div className="data-row">
+                  <div className="data-label">Bejelentő neve</div>
+                  <div className="data-value">{attempt.callerName || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Telefonszám</div>
+                  <div className="data-value">{attempt.callerPhone || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Helyszín</div>
+                  <div className="data-value">{attempt.locationText || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Kategória / esemény</div>
+                  <div className="data-value">{attempt.eventDescription || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Pontszám</div>
+                  <div className="data-value">{attempt.score ?? "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Talált egységek</div>
+                  <div className="data-value">{attempt.matchedUnitCount}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Hiányzó egységek</div>
+                  <div className="data-value">{attempt.missingUnitCount}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Hibás egységek</div>
+                  <div className="data-value">{attempt.incorrectUnitCount}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Jegyzetellenőrzés</div>
+                  <div className="data-value">{attempt.noteEvaluationStatus || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Kezdés</div>
+                  <div className="data-value">{attempt.startedAt || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Beküldés</div>
+                  <div className="data-value">{attempt.submittedAt || "-"}</div>
+                </div>
+              </div>
 
               {attempt.evaluatorSummary && (
                 <div
                   style={{
-                    marginTop: "12px",
-                    padding: "12px",
-                    borderRadius: "10px",
+                    marginTop: "14px",
+                    padding: "14px",
+                    borderRadius: "12px",
                     backgroundColor: "#f8fafc",
                     border: "1px solid #e4e7ec",
                   }}
                 >
-                  <strong>Összegzés:</strong>
-                  <p style={{ margin: "8px 0 0 0" }}>{attempt.evaluatorSummary}</p>
+                  <strong>Összegzés</strong>
+                  <p style={{ margin: "8px 0 0 0", lineHeight: 1.5 }}>
+                    {attempt.evaluatorSummary}
+                  </p>
                 </div>
               )}
 
               {Array.isArray(attempt.feedbackItems) && attempt.feedbackItems.length > 0 && (
                 <div style={{ marginTop: "14px" }}>
-                  <strong>Részletes visszajelzések:</strong>
+                  <strong>Részletes visszajelzések</strong>
 
                   <div
                     style={{
@@ -164,11 +187,11 @@ function UserResultsPage() {
                         key={item.id}
                         style={{
                           ...feedbackStyle(item.feedbackType),
-                          borderRadius: "10px",
-                          padding: "10px 12px",
+                          borderRadius: "12px",
+                          padding: "12px 14px",
                         }}
                       >
-                        <div style={{ fontWeight: 700, marginBottom: "4px" }}>
+                        <div style={{ fontWeight: 800, marginBottom: "4px" }}>
                           {item.feedbackType}
                         </div>
                         <div>{item.message}</div>

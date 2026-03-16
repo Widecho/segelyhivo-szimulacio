@@ -2,42 +2,27 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
 import DashboardCard from "../components/DashboardCard";
 
-function dashboardLinkStyle() {
-  return {
-    display: "inline-block",
-    padding: "10px 14px",
-    backgroundColor: "#1f3c88",
-    color: "#ffffff",
-    textDecoration: "none",
-    borderRadius: "8px",
-    fontWeight: 600,
-  };
-}
-
 function UserDashboardPage() {
   const { username } = useAuth();
 
   return (
     <div>
-      <h2>Felhasználói irányítópult</h2>
-      <p>
-        Üdv, <strong>{username}</strong>! Innen érheted el a szimulációt,
-        a korábbi eredményeidet és a profilodat.
-      </p>
+      <div className="page-header-row">
+        <div>
+          <h2 className="page-title">Felhasználói irányítópult</h2>
+          <p className="page-description">
+            Üdv, <strong>{username}</strong>! Innen érheted el a szimulációt,
+            a korábbi eredményeidet és a profilodat.
+          </p>
+        </div>
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "16px",
-          marginTop: "24px",
-        }}
-      >
+      <div className="card-grid three-col">
         <DashboardCard
           title="Szimuláció indítása"
-          description="Új 112-es operátori szituáció indítása."
+          description="Új 112-es operátori gyakorlati szituáció indítása."
           footer={
-            <Link to="/user/simulation" style={dashboardLinkStyle()}>
+            <Link to="/user/simulation" className="primary-button">
               Megnyitás
             </Link>
           }
@@ -45,9 +30,9 @@ function UserDashboardPage() {
 
         <DashboardCard
           title="Korábbi eredmények"
-          description="A teljesített szituációk és értékelések áttekintése."
+          description="A teljesített szituációk és a részletes kiértékelések áttekintése."
           footer={
-            <Link to="/user/results" style={dashboardLinkStyle()}>
+            <Link to="/user/results" className="secondary-button">
               Megnyitás
             </Link>
           }
@@ -57,7 +42,7 @@ function UserDashboardPage() {
           title="Profil"
           description="A saját felhasználói adatok és állapot megtekintése."
           footer={
-            <Link to="/profile" style={dashboardLinkStyle()}>
+            <Link to="/profile" className="secondary-button">
               Megnyitás
             </Link>
           }

@@ -2,42 +2,27 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../services/AuthContext";
 import DashboardCard from "../components/DashboardCard";
 
-function dashboardLinkStyle() {
-  return {
-    display: "inline-block",
-    padding: "10px 14px",
-    backgroundColor: "#1f3c88",
-    color: "#ffffff",
-    textDecoration: "none",
-    borderRadius: "8px",
-    fontWeight: 600,
-  };
-}
-
 function AdminDashboardPage() {
   const { username } = useAuth();
 
   return (
     <div>
-      <h2>Admin irányítópult</h2>
-      <p>
-        Üdv, <strong>{username}</strong>! Itt kezelheted a felhasználókat,
-        szituációkat és eredményeket.
-      </p>
+      <div className="page-header-row">
+        <div>
+          <h2 className="page-title">Admin irányítópult</h2>
+          <p className="page-description">
+            Üdv, <strong>{username}</strong>! Itt kezelheted a felhasználókat,
+            a szituációkat és az értékelési eredményeket.
+          </p>
+        </div>
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: "16px",
-          marginTop: "24px",
-        }}
-      >
+      <div className="card-grid three-col">
         <DashboardCard
           title="Felhasználók kezelése"
-          description="A rendszerben szereplő felhasználók áttekintése."
+          description="A rendszerben szereplő felhasználók áttekintése és adminisztrációja."
           footer={
-            <Link to="/admin/users" style={dashboardLinkStyle()}>
+            <Link to="/admin/users" className="secondary-button">
               Megnyitás
             </Link>
           }
@@ -45,9 +30,9 @@ function AdminDashboardPage() {
 
         <DashboardCard
           title="Szituációk"
-          description="A meglévő szituációk listázása és kezelése."
+          description="A meglévő szituációk listázása, szerkesztése, aktiválása és kezelése."
           footer={
-            <Link to="/admin/scenarios" style={dashboardLinkStyle()}>
+            <Link to="/admin/scenarios" className="primary-button">
               Megnyitás
             </Link>
           }
@@ -55,9 +40,9 @@ function AdminDashboardPage() {
 
         <DashboardCard
           title="Új szituáció"
-          description="Új szituáció létrehozása adminisztrátorként."
+          description="Új oktatási szituáció létrehozása adminisztrátorként."
           footer={
-            <Link to="/admin/scenarios/new" style={dashboardLinkStyle()}>
+            <Link to="/admin/scenarios/new" className="secondary-button">
               Megnyitás
             </Link>
           }
@@ -65,9 +50,9 @@ function AdminDashboardPage() {
 
         <DashboardCard
           title="Eredmények"
-          description="A felhasználók teljesítményeinek áttekintése."
+          description="A felhasználók teljesítményeinek és próbálkozásainak áttekintése."
           footer={
-            <Link to="/admin/results" style={dashboardLinkStyle()}>
+            <Link to="/admin/results" className="secondary-button">
               Megnyitás
             </Link>
           }

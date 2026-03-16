@@ -22,135 +22,142 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div style={{ padding: "24px", fontFamily: "Arial, sans-serif" }}>
-          <h1>112 Segélyhívó Szimuláció</h1>
+        <div className="app-shell">
+          <header className="app-header">
+            <h1 className="app-title">112 Segélyhívó Szimuláció</h1>
+            <p className="app-subtitle">
+              Oktatási célú szimulációs rendszer segélyhívó operátorok gyakorlásához.
+            </p>
+          </header>
 
           <Navigation />
 
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+          <main className="page-section">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-            <Route
-              path="/dashboard/user"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="USER">
-                    <UserDashboardPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/dashboard/user"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="USER">
+                      <UserDashboardPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/dashboard/admin"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="ADMIN">
-                    <AdminDashboardPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/dashboard/admin"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="ADMIN">
+                      <AdminDashboardPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/user/simulation"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="USER">
-                    <UserSimulationPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/user/simulation"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="USER">
+                      <UserSimulationPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/user/results"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="USER">
-                    <UserResultsPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/user/results"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="USER">
+                      <UserResultsPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/scenarios/new"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="ADMIN">
-                    <AdminCreateScenarioPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin/scenarios/new"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="ADMIN">
+                      <AdminCreateScenarioPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/scenarios/:scenarioId"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="ADMIN">
-                    <AdminScenarioDetailsPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin/scenarios/:scenarioId"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="ADMIN">
+                      <AdminScenarioDetailsPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/scenarios/:scenarioId/edit"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="ADMIN">
-                    <AdminEditScenarioPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin/scenarios/:scenarioId/edit"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="ADMIN">
+                      <AdminEditScenarioPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/scenarios"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="ADMIN">
-                    <AdminScenariosPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin/scenarios"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="ADMIN">
+                      <AdminScenariosPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/results"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="ADMIN">
-                    <AdminUserResultsPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin/results"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="ADMIN">
+                      <AdminUserResultsPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/users"
-              element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRole="ADMIN">
-                    <AdminUsersPage />
-                  </RoleRoute>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute>
+                    <RoleRoute allowedRole="ADMIN">
+                      <AdminUsersPage />
+                    </RoleRoute>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </main>
         </div>
       </BrowserRouter>
     </AuthProvider>

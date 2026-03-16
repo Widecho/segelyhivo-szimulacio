@@ -6,20 +6,6 @@ import {
 } from "../services/adminService";
 import { Link } from "react-router-dom";
 
-function actionButtonStyle(backgroundColor) {
-  return {
-    display: "inline-block",
-    padding: "8px 12px",
-    backgroundColor,
-    color: "#fff",
-    textDecoration: "none",
-    borderRadius: "8px",
-    fontWeight: 600,
-    border: "none",
-    cursor: "pointer",
-  };
-}
-
 function AdminScenariosPage() {
   const [scenarios, setScenarios] = useState([]);
   const [error, setError] = useState("");
@@ -88,118 +74,105 @@ function AdminScenariosPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "16px",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="page-header-row">
         <div>
-          <h2>Szituációk</h2>
-          <p>Itt láthatók a backendből betöltött szituációk.</p>
+          <h2 className="page-title">Szituációk</h2>
+          <p className="page-description">
+            Itt láthatók a backendből betöltött szituációk, azok állapota és főbb adatai.
+          </p>
         </div>
 
-        <Link
-          to="/admin/scenarios/new"
-          style={{
-            display: "inline-block",
-            padding: "10px 14px",
-            backgroundColor: "#1f3c88",
-            color: "#fff",
-            textDecoration: "none",
-            borderRadius: "8px",
-            fontWeight: 600,
-          }}
-        >
+        <Link to="/admin/scenarios/new" className="primary-button">
           Új szituáció
         </Link>
       </div>
 
-      {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      {isLoading && <p>Betöltés...</p>}
+      {message && <div className="success-message">{message}</div>}
+      {error && <div className="error-message">{error}</div>}
+      {isLoading && <div className="loading-message">Betöltés...</div>}
 
       {!isLoading && scenarios.length === 0 && !error && (
-        <p>Jelenleg nincs megjeleníthető szituáció.</p>
+        <div className="empty-message">Jelenleg nincs megjeleníthető szituáció.</div>
       )}
 
       {!isLoading && scenarios.length > 0 && (
-        <div
-          style={{
-            marginTop: "20px",
-            display: "grid",
-            gap: "14px",
-          }}
-        >
+        <div className="card-grid two-col">
           {scenarios.map((scenario) => (
-            <div
-              key={scenario.id}
-              style={{
-                border: "1px solid #d9d9d9",
-                borderRadius: "12px",
-                padding: "16px",
-                backgroundColor: "#fff",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-              }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: "10px" }}>
-                {scenario.title}
-              </h3>
+            <div key={scenario.id} className="panel-card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                  marginBottom: "12px",
+                }}
+              >
+                <h3 style={{ margin: 0 }}>{scenario.title}</h3>
 
-              <p style={{ margin: "4px 0" }}>
-                <strong>Azonosító:</strong> {scenario.id}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Kategória:</strong> {scenario.category}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Helyszín:</strong> {scenario.geoAddress}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Hangfájl:</strong> {scenario.audioFileName}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Létrehozó:</strong> {scenario.createdBy}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Aktív:</strong> {scenario.isActive ? "Igen" : "Nem"}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Elvárt egységek száma:</strong> {scenario.requiredUnitCount}
-              </p>
-              <p style={{ margin: "10px 0 0 0" }}>
-                <strong>Elvárt jegyzet:</strong> {scenario.expectedNote}
-              </p>
+                <span className={`badge ${scenario.isActive ? "active" : "inactive"}`}>
+                  {scenario.isActive ? "Aktív" : "Inaktív"}
+                </span>
+              </div>
+
+              <div className="data-list">
+                <div className="data-row">
+                  <div className="data-label">Azonosító</div>
+                  <div className="data-value">{scenario.id}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Kategória</div>
+                  <div className="data-value">{scenario.category}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Helyszín</div>
+                  <div className="data-value">{scenario.geoAddress}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Hangfájl</div>
+                  <div className="data-value">{scenario.audioFileName || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Létrehozó</div>
+                  <div className="data-value">{scenario.createdBy || "-"}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Elvárt egységek</div>
+                  <div className="data-value">{scenario.requiredUnitCount}</div>
+                </div>
+
+                <div className="data-row">
+                  <div className="data-label">Elvárt jegyzet</div>
+                  <div className="data-value">{scenario.expectedNote}</div>
+                </div>
+              </div>
 
               <div
                 style={{
-                  marginTop: "14px",
+                  marginTop: "16px",
                   display: "flex",
                   gap: "10px",
                   flexWrap: "wrap",
                 }}
               >
-                <Link
-                  to={`/admin/scenarios/${scenario.id}`}
-                  style={actionButtonStyle("#475467")}
-                >
+                <Link to={`/admin/scenarios/${scenario.id}`} className="secondary-button">
                   Részletek
                 </Link>
 
-                <Link
-                  to={`/admin/scenarios/${scenario.id}/edit`}
-                  style={actionButtonStyle("#1f3c88")}
-                >
+                <Link to={`/admin/scenarios/${scenario.id}/edit`} className="primary-button">
                   Szerkesztés
                 </Link>
 
                 {scenario.isActive ? (
                   <button
                     type="button"
-                    style={actionButtonStyle("#b42318")}
+                    className="danger-button"
                     disabled={
                       updatingScenarioId === scenario.id ||
                       deletingScenarioId === scenario.id
@@ -211,7 +184,7 @@ function AdminScenariosPage() {
                 ) : (
                   <button
                     type="button"
-                    style={actionButtonStyle("#137333")}
+                    className="success-button"
                     disabled={
                       updatingScenarioId === scenario.id ||
                       deletingScenarioId === scenario.id
@@ -224,7 +197,7 @@ function AdminScenariosPage() {
 
                 <button
                   type="button"
-                  style={actionButtonStyle("#8f1d1d")}
+                  className="danger-button"
                   disabled={
                     updatingScenarioId === scenario.id ||
                     deletingScenarioId === scenario.id

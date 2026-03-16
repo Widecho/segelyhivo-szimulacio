@@ -386,3 +386,21 @@
     align-items: flex-start;
   }
 }
+.simulation-shell {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(244,248,252,0.96) 100%);
+  border: 1px solid rgba(215, 221, 228, 0.92);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+}
+
+.simulation-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.simulation-map-meta {
+  background-color: #fbfdff;
+}
+
+.simulation-info-card {
+  background-color: #fbfdff;
+}
