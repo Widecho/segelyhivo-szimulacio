@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
@@ -21,11 +21,11 @@ import "../styles/auth.css";
 import "../styles/simulation.css";
 
 const fallbackScenario = {
-  id: "112202603120000000001",
+  id: "",
   title: "Bejövő segélyhívás kezelése",
-  category: "Tűzeset",
+  category: "",
   address: "",
-  audioFileName: "tuzeset_01.mp3",
+  audioFileName: "",
 };
 
 function shortenText(text, maxLength = 70) {
@@ -70,6 +70,15 @@ function modalCardStyle(width = "720px") {
   };
 }
 
+function buildAudioUrl(audioFileName) {
+  if (!audioFileName) {
+    return "";
+  }
+
+  const encodedFileName = encodeURIComponent(audioFileName);
+  return `http://${window.location.hostname}:8081/uploads/audio/${encodedFileName}`;
+}
+
 function UserSimulationPage() {
   const navigate = useNavigate();
 
@@ -105,6 +114,13 @@ function UserSimulationPage() {
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [coordinateInput, setCoordinateInput] = useState("");
   const [mapMessage, setMapMessage] = useState("");
+
+  const audioUrl = useMemo(
+    () => buildAudioUrl(activeScenario?.audioFileName),
+    [activeScenario?.audioFileName]
+  );
+
+  const shouldAutoplayAudio = callState === "ACCEPTED" && Boolean(audioUrl);
 
   const resetSimulationState = useCallback((availability = "NOT_READY", call = "IDLE") => {
     setAvailabilityStatus(availability);
@@ -169,7 +185,7 @@ function UserSimulationPage() {
         title: scenarioResponse.title,
         category: scenarioResponse.category,
         address: "",
-        audioFileName: scenarioResponse.audioFileName,
+        audioFileName: scenarioResponse.audioFileName || "",
       };
 
       const nextUnits = {
@@ -183,6 +199,7 @@ function UserSimulationPage() {
       setScenarioCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
       setDataLoadMessage("");
     } catch (err) {
+      setActiveScenario(fallbackScenario);
       setAvailableUnits(mockEmergencyUnits);
       setScenarioCategories([]);
       setDataLoadMessage(
@@ -553,6 +570,8 @@ function UserSimulationPage() {
         availabilityLabel={availabilityLabel}
         isAvailable={availabilityStatus === "AVAILABLE"}
         scenarioTitle={activeScenario?.title || "Bejövő segélyhívás kezelése"}
+        audioUrl={audioUrl}
+        shouldAutoplayAudio={shouldAutoplayAudio}
         onSetAvailable={handleSetAvailable}
         onSetUnavailable={handleSetUnavailable}
         onOpenCallModal={handleOpenCallModal}

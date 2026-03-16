@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 function buttonStyle(isPrimary = false, isDanger = false) {
   return {
     padding: "8px 12px",
@@ -27,11 +29,45 @@ function SimulationHeader({
   availabilityLabel,
   isAvailable,
   scenarioTitle,
+  audioUrl,
+  shouldAutoplayAudio,
   onSetAvailable,
   onSetUnavailable,
   onOpenCallModal,
   canOpenCallModal,
 }) {
+  const audioRef = useRef(null);
+  const lastPlayedUrlRef = useRef("");
+
+  useEffect(() => {
+    const audioElement = audioRef.current;
+
+    if (!audioElement) {
+      return;
+    }
+
+    if (!shouldAutoplayAudio || !audioUrl) {
+      audioElement.pause();
+      audioElement.currentTime = 0;
+      lastPlayedUrlRef.current = "";
+      return;
+    }
+
+    if (lastPlayedUrlRef.current === audioUrl) {
+      return;
+    }
+
+    audioElement.currentTime = 0;
+    audioElement
+      .play()
+      .then(() => {
+        lastPlayedUrlRef.current = audioUrl;
+      })
+      .catch(() => {
+        lastPlayedUrlRef.current = "";
+      });
+  }, [audioUrl, shouldAutoplayAudio]);
+
   return (
     <div
       style={{
@@ -42,6 +78,8 @@ function SimulationHeader({
         boxShadow: "0 6px 18px rgba(15, 23, 42, 0.12)",
       }}
     >
+      <audio ref={audioRef} src={audioUrl || ""} preload="auto" style={{ display: "none" }} />
+
       <div
         style={{
           display: "flex",
@@ -51,10 +89,11 @@ function SimulationHeader({
           flexWrap: "wrap",
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: "18px", fontWeight: 800, marginBottom: "4px" }}>
             112 Operátori felület
           </div>
+
           <div style={{ fontSize: "14px", opacity: 0.95 }}>
             Aktív szituáció: <strong>{scenarioTitle}</strong>
           </div>
