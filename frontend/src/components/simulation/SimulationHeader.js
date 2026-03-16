@@ -78,7 +78,12 @@ function SimulationHeader({
         boxShadow: "0 6px 18px rgba(15, 23, 42, 0.12)",
       }}
     >
-      <audio ref={audioRef} src={audioUrl || ""} preload="auto" style={{ display: "none" }} />
+      <audio
+        ref={audioRef}
+        src={audioUrl || ""}
+        preload="auto"
+        style={{ display: "none" }}
+      />
 
       <div
         style={{

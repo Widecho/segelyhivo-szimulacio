@@ -3,8 +3,14 @@ import { useNavigate } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import mockEmergencyUnits from "../utils/mockEmergencyUnits";
 import { saveLatestSimulationResult } from "../utils/simulationResultStorage";
-import { submitSimulationAttempt } from "../services/userService";
-import { getCurrentSimulationScenario, getSimulationUnits } from "../services/simulationService";
+import {
+  generateConferenceSummary,
+  submitSimulationAttempt,
+} from "../services/userService";
+import {
+  getCurrentSimulationScenario,
+  getSimulationUnits,
+} from "../services/simulationService";
 import { getScenarioCategories } from "../services/referenceService";
 import {
   parseCoordinateInput,
@@ -17,6 +23,7 @@ import SimulationUnitsPanel from "../components/simulation/SimulationUnitsPanel"
 import SimulationEvaluationPanel from "../components/simulation/SimulationEvaluationPanel";
 import SimulationStatusPanel from "../components/simulation/SimulationStatusPanel";
 import SimulationMapPanel from "../components/simulation/SimulationMapPanel";
+import ConferenceCallModal from "../components/simulation/ConferenceCallModal";
 import "../styles/auth.css";
 import "../styles/simulation.css";
 
@@ -75,8 +82,9 @@ function buildAudioUrl(audioFileName) {
     return "";
   }
 
-  const encodedFileName = encodeURIComponent(audioFileName);
-  return `http://${window.location.hostname}:8081/uploads/audio/${encodedFileName}`;
+  return `http://${window.location.hostname}:8081/uploads/audio/${encodeURIComponent(
+    audioFileName
+  )}`;
 }
 
 function UserSimulationPage() {
@@ -99,6 +107,12 @@ function UserSimulationPage() {
 
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isUnitsModalOpen, setIsUnitsModalOpen] = useState(false);
+
+  const [conferenceModalOpen, setConferenceModalOpen] = useState(false);
+  const [conferenceLoading, setConferenceLoading] = useState(false);
+  const [conferenceError, setConferenceError] = useState("");
+  const [conferenceSummary, setConferenceSummary] = useState(null);
+  const [lastConferencePayload, setLastConferencePayload] = useState(null);
 
   const [formData, setFormData] = useState({
     callerName: "",
@@ -145,6 +159,11 @@ function UserSimulationPage() {
     setIsSubmittingAttempt(false);
     setIsCallModalOpen(false);
     setIsUnitsModalOpen(false);
+    setConferenceModalOpen(false);
+    setConferenceLoading(false);
+    setConferenceError("");
+    setConferenceSummary(null);
+    setLastConferencePayload(null);
   }, []);
 
   const applyChosenLocation = useCallback((locationItem, infoMessage = "") => {
@@ -181,10 +200,10 @@ function UserSimulationPage() {
       ]);
 
       const nextScenario = {
-        id: scenarioResponse.id,
-        title: scenarioResponse.title,
-        category: scenarioResponse.category,
-        address: "",
+        id: scenarioResponse.id || "",
+        title: scenarioResponse.title || "Bejövő segélyhívás kezelése",
+        category: scenarioResponse.category || "",
+        address: scenarioResponse.address || "",
         audioFileName: scenarioResponse.audioFileName || "",
       };
 
@@ -479,6 +498,35 @@ function UserSimulationPage() {
     setMessage("");
   };
 
+  const createConferencePayload = () => ({
+    scenarioId: activeScenario.id,
+    callerName: formData.callerName,
+    callerPhone: formData.callerPhone,
+    locationText: formData.location,
+    eventDescription: formData.categoryName,
+    userNote: formData.note,
+    selectedUnitIds: selectedUnits.map((unit) => unit.id),
+  });
+
+  const runConferenceGeneration = async (payload) => {
+    setConferenceModalOpen(true);
+    setConferenceLoading(true);
+    setConferenceError("");
+    setConferenceSummary(null);
+    setLastConferencePayload(payload);
+
+    try {
+      const response = await generateConferenceSummary(payload);
+      setConferenceSummary(response);
+    } catch (err) {
+      setConferenceError(
+        err.message || "Nem sikerült AI konferencia összefoglalót generálni."
+      );
+    } finally {
+      setConferenceLoading(false);
+    }
+  };
+
   const handleSubmitUnits = async () => {
     if (selectedUnits.length < 1) {
       setErrors((prev) => ({
@@ -497,7 +545,7 @@ function UserSimulationPage() {
     }));
 
     try {
-      const response = await submitSimulationAttempt({
+      const submitPayload = {
         scenarioId: activeScenario.id,
         callerName: formData.callerName,
         callerPhone: formData.callerPhone,
@@ -505,7 +553,9 @@ function UserSimulationPage() {
         eventDescription: formData.categoryName,
         userNote: formData.note,
         selectedUnitIds: selectedUnits.map((unit) => unit.id),
-      });
+      };
+
+      const response = await submitSimulationAttempt(submitPayload);
 
       const resultPayload = {
         id: response.attemptId,
@@ -527,6 +577,8 @@ function UserSimulationPage() {
       setEvaluationResult(response);
       setSimulationStep("EVALUATION");
       setIsUnitsModalOpen(false);
+
+      await runConferenceGeneration(createConferencePayload());
     } catch (err) {
       setErrors((prev) => ({
         ...prev,
@@ -535,6 +587,14 @@ function UserSimulationPage() {
     } finally {
       setIsSubmittingAttempt(false);
     }
+  };
+
+  const handleRegenerateConference = async () => {
+    if (!lastConferencePayload) {
+      return;
+    }
+
+    await runConferenceGeneration(lastConferencePayload);
   };
 
   const handleRestartSimulation = async () => {
@@ -728,6 +788,15 @@ function UserSimulationPage() {
           </div>
         </div>
       )}
+
+      <ConferenceCallModal
+        open={conferenceModalOpen}
+        isLoading={conferenceLoading}
+        error={conferenceError}
+        summaryData={conferenceSummary}
+        onClose={() => setConferenceModalOpen(false)}
+        onRegenerate={handleRegenerateConference}
+      />
     </div>
   );
 }

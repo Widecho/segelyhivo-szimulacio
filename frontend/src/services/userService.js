@@ -18,3 +18,10 @@ export async function submitSimulationAttempt(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function generateConferenceSummary(payload) {
+  return apiRequest("/me/simulation/conference-summary", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

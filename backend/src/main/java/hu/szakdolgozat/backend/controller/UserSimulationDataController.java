@@ -1,5 +1,7 @@
 package hu.szakdolgozat.backend.controller;
 
+import hu.szakdolgozat.backend.dto.simulation.ConferenceSummaryRequest;
+import hu.szakdolgozat.backend.dto.simulation.ConferenceSummaryResponse;
 import hu.szakdolgozat.backend.dto.simulation.CurrentSimulationScenarioResponse;
 import hu.szakdolgozat.backend.dto.simulation.SimulationUnitOptionResponse;
 import hu.szakdolgozat.backend.dto.simulation.SimulationUnitsResponse;
@@ -9,10 +11,14 @@ import hu.szakdolgozat.backend.entity.SimulationAttempt;
 import hu.szakdolgozat.backend.repository.EmergencyUnitRepository;
 import hu.szakdolgozat.backend.repository.ScenarioRepository;
 import hu.szakdolgozat.backend.repository.SimulationAttemptRepository;
+import hu.szakdolgozat.backend.service.ai.AiConferenceSummaryService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -22,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @RestController
@@ -31,15 +36,18 @@ public class UserSimulationDataController {
     private final ScenarioRepository scenarioRepository;
     private final EmergencyUnitRepository emergencyUnitRepository;
     private final SimulationAttemptRepository simulationAttemptRepository;
+    private final AiConferenceSummaryService aiConferenceSummaryService;
 
     public UserSimulationDataController(
             ScenarioRepository scenarioRepository,
             EmergencyUnitRepository emergencyUnitRepository,
-            SimulationAttemptRepository simulationAttemptRepository
+            SimulationAttemptRepository simulationAttemptRepository,
+            AiConferenceSummaryService aiConferenceSummaryService
     ) {
         this.scenarioRepository = scenarioRepository;
         this.emergencyUnitRepository = emergencyUnitRepository;
         this.simulationAttemptRepository = simulationAttemptRepository;
+        this.aiConferenceSummaryService = aiConferenceSummaryService;
     }
 
     @Transactional(readOnly = true)
@@ -110,6 +118,13 @@ public class UserSimulationDataController {
                 mapUnits(emergencyUnitRepository.findByServiceType_CodeAndIsActiveTrue("AMBULANCE")),
                 mapUnits(emergencyUnitRepository.findByServiceType_CodeAndIsActiveTrue("POLICE"))
         );
+    }
+
+    @PostMapping("/api/me/simulation/conference-summary")
+    public ConferenceSummaryResponse generateConferenceSummary(
+            @Valid @RequestBody ConferenceSummaryRequest request
+    ) {
+        return aiConferenceSummaryService.generateConferenceSummary(request);
     }
 
     private List<SimulationUnitOptionResponse> mapUnits(List<EmergencyUnit> units) {
