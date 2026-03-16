@@ -148,12 +148,14 @@ function AdminEditScenarioPage() {
     title: "",
     categoryName: "",
     address: "",
-    audioFileName: "",
     expectedNote: "",
     selectedUnitIds: [],
     latitude: "",
     longitude: "",
+    existingAudioFileName: "",
   });
+
+  const [audioFile, setAudioFile] = useState(null);
 
   const [locationSearchText, setLocationSearchText] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState([]);
@@ -189,13 +191,13 @@ function AdminEditScenarioPage() {
           title: scenarioResponse.title || "",
           categoryName: scenarioResponse.categoryName || "",
           address: scenarioResponse.address || "",
-          audioFileName: scenarioResponse.audioFileName || "",
           expectedNote: scenarioResponse.expectedNote || "",
           selectedUnitIds: Array.isArray(scenarioResponse.selectedUnitIds)
             ? scenarioResponse.selectedUnitIds
             : [],
           latitude: latitude === "" ? "" : String(latitude),
           longitude: longitude === "" ? "" : String(longitude),
+          existingAudioFileName: scenarioResponse.audioFileName || "",
         });
 
         setLocationSearchText(scenarioResponse.address || "");
@@ -347,6 +349,18 @@ function AdminEditScenarioPage() {
     setMessage("");
   }
 
+  function handleAudioFileChange(event) {
+    const file = event.target.files?.[0] || null;
+    setAudioFile(file);
+
+    setErrors((prev) => ({
+      ...prev,
+      audioFile: "",
+    }));
+
+    setMessage("");
+  }
+
   function handleLocationSearchChange(value) {
     setLocationSearchText(value);
 
@@ -440,8 +454,12 @@ function AdminEditScenarioPage() {
       newErrors.address = "Érvényes helyszín és koordináta kiválasztása kötelező.";
     }
 
-    if (!formData.audioFileName.trim()) {
-      newErrors.audioFileName = "A hangfájl neve kötelező.";
+    if (audioFile && !audioFile.name.toLowerCase().endsWith(".mp3")) {
+      newErrors.audioFile = "Csak MP3 formátumú hangfájl tölthető fel.";
+    }
+
+    if (!formData.existingAudioFileName && !audioFile) {
+      newErrors.audioFile = "MP3 hangfájl feltöltése kötelező.";
     }
 
     if (!formData.expectedNote.trim()) {
@@ -455,6 +473,27 @@ function AdminEditScenarioPage() {
     return newErrors;
   }
 
+  function buildPayload() {
+    const payload = new FormData();
+    payload.append("title", formData.title);
+    payload.append("categoryName", formData.categoryName);
+    payload.append("address", formData.address);
+    payload.append("expectedNote", formData.expectedNote);
+    payload.append("latitude", formData.latitude);
+    payload.append("longitude", formData.longitude);
+    payload.append("existingAudioFileName", formData.existingAudioFileName);
+
+    formData.selectedUnitIds.forEach((unitId) => {
+      payload.append("selectedUnitIds", String(unitId));
+    });
+
+    if (audioFile) {
+      payload.append("audioFile", audioFile);
+    }
+
+    return payload;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -466,11 +505,7 @@ function AdminEditScenarioPage() {
     }
 
     try {
-      const response = await updateAdminScenario(scenarioId, {
-        ...formData,
-        latitude: Number(formData.latitude),
-        longitude: Number(formData.longitude),
-      });
+      const response = await updateAdminScenario(scenarioId, buildPayload());
 
       navigate("/admin/scenarios", {
         state: {
@@ -626,16 +661,27 @@ function AdminEditScenarioPage() {
 
           <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
-              <label htmlFor="audioFileName">Hangfájl neve</label>
+              <label htmlFor="audioFile">Hanganyag (MP3)</label>
               <input
-                id="audioFileName"
-                name="audioFileName"
-                value={formData.audioFileName}
-                onChange={handleChange}
-                style={inputStyle(Boolean(errors.audioFileName))}
+                id="audioFile"
+                type="file"
+                accept=".mp3,audio/mpeg"
+                onChange={handleAudioFileChange}
+                style={inputStyle(Boolean(errors.audioFile))}
               />
-              {errors.audioFileName && (
-                <div style={fieldErrorStyle()}>{errors.audioFileName}</div>
+              <div style={helperStyle()}>
+                Ha nem választasz újat, a meglévő hanganyag marad meg.
+              </div>
+              <div style={helperStyle()}>
+                Jelenlegi fájl: {formData.existingAudioFileName || "Nincs megadva"}
+              </div>
+              {audioFile && (
+                <div style={helperStyle()}>
+                  Új kiválasztott fájl: {audioFile.name}
+                </div>
+              )}
+              {errors.audioFile && (
+                <div style={fieldErrorStyle()}>{errors.audioFile}</div>
               )}
             </div>
 

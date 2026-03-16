@@ -6,6 +6,7 @@ import hu.szakdolgozat.backend.dto.scenario.ScenarioDetailsResponse;
 import hu.szakdolgozat.backend.dto.scenario.UpdateScenarioStatusRequest;
 import hu.szakdolgozat.backend.service.scenario.AdminScenarioService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,10 +28,10 @@ public class AdminScenarioController {
         return adminScenarioService.getAllScenarios();
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CreateScenarioResponse createScenario(
             Authentication authentication,
-            @Valid @RequestBody CreateScenarioRequest request
+            @Valid @ModelAttribute CreateScenarioRequest request
     ) {
         return adminScenarioService.createScenario(authentication.getName(), request);
     }
@@ -40,10 +41,10 @@ public class AdminScenarioController {
         return adminScenarioService.getScenarioDetails(scenarioId);
     }
 
-    @PutMapping("/{scenarioId}")
+    @PutMapping(value = "/{scenarioId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CreateScenarioResponse updateScenario(
             @PathVariable String scenarioId,
-            @Valid @RequestBody CreateScenarioRequest request
+            @Valid @ModelAttribute CreateScenarioRequest request
     ) {
         return adminScenarioService.updateScenario(scenarioId, request);
     }

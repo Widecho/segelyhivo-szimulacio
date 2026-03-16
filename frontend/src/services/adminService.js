@@ -15,14 +15,14 @@ export async function getAdminScenarioDetails(scenarioId) {
 export async function createAdminScenario(payload) {
   return apiRequest("/admin/scenarios", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: payload,
   });
 }
 
 export async function updateAdminScenario(scenarioId, payload) {
   return apiRequest(`/admin/scenarios/${scenarioId}`, {
     method: "PUT",
-    body: JSON.stringify(payload),
+    body: payload,
   });
 }
 

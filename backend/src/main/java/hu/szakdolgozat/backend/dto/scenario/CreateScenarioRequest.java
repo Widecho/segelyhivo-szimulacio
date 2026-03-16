@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,9 +25,6 @@ public class CreateScenarioRequest {
     @NotBlank(message = "A helyszín megadása kötelező.")
     private String address;
 
-    @NotBlank(message = "A hangfájl neve kötelező.")
-    private String audioFileName;
-
     @NotBlank(message = "Az elvárt jegyzet megadása kötelező.")
     private String expectedNote;
 
@@ -42,4 +40,8 @@ public class CreateScenarioRequest {
     @DecimalMin(value = "-180.0", message = "A hosszúsági koordináta túl kicsi.")
     @DecimalMax(value = "180.0", message = "A hosszúsági koordináta túl nagy.")
     private BigDecimal longitude;
+
+    private MultipartFile audioFile;
+
+    private String existingAudioFileName;
 }

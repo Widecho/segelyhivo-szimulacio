@@ -142,12 +142,13 @@ function AdminCreateScenarioPage() {
     title: "",
     categoryName: "",
     address: "",
-    audioFileName: "",
     expectedNote: "",
     selectedUnitIds: [],
     latitude: "",
     longitude: "",
   });
+
+  const [audioFile, setAudioFile] = useState(null);
 
   const [locationSearchText, setLocationSearchText] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState([]);
@@ -305,6 +306,18 @@ function AdminCreateScenarioPage() {
     setMessage("");
   }
 
+  function handleAudioFileChange(event) {
+    const file = event.target.files?.[0] || null;
+    setAudioFile(file);
+
+    setErrors((prev) => ({
+      ...prev,
+      audioFile: "",
+    }));
+
+    setMessage("");
+  }
+
   function handleLocationSearchChange(value) {
     setLocationSearchText(value);
 
@@ -398,8 +411,10 @@ function AdminCreateScenarioPage() {
       newErrors.address = "Érvényes helyszín és koordináta kiválasztása kötelező.";
     }
 
-    if (!formData.audioFileName.trim()) {
-      newErrors.audioFileName = "A hangfájl neve kötelező.";
+    if (!audioFile) {
+      newErrors.audioFile = "MP3 hangfájl feltöltése kötelező.";
+    } else if (!audioFile.name.toLowerCase().endsWith(".mp3")) {
+      newErrors.audioFile = "Csak MP3 formátumú hangfájl tölthető fel.";
     }
 
     if (!formData.expectedNote.trim()) {
@@ -413,6 +428,26 @@ function AdminCreateScenarioPage() {
     return newErrors;
   }
 
+  function buildPayload() {
+    const payload = new FormData();
+    payload.append("title", formData.title);
+    payload.append("categoryName", formData.categoryName);
+    payload.append("address", formData.address);
+    payload.append("expectedNote", formData.expectedNote);
+    payload.append("latitude", formData.latitude);
+    payload.append("longitude", formData.longitude);
+
+    formData.selectedUnitIds.forEach((unitId) => {
+      payload.append("selectedUnitIds", String(unitId));
+    });
+
+    if (audioFile) {
+      payload.append("audioFile", audioFile);
+    }
+
+    return payload;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -424,11 +459,7 @@ function AdminCreateScenarioPage() {
     }
 
     try {
-      const response = await createAdminScenario({
-        ...formData,
-        latitude: Number(formData.latitude),
-        longitude: Number(formData.longitude),
-      });
+      const response = await createAdminScenario(buildPayload());
 
       navigate("/admin/scenarios", {
         state: {
@@ -580,16 +611,24 @@ function AdminCreateScenarioPage() {
 
           <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
-              <label htmlFor="audioFileName">Hangfájl neve</label>
+              <label htmlFor="audioFile">Hanganyag (MP3)</label>
               <input
-                id="audioFileName"
-                name="audioFileName"
-                value={formData.audioFileName}
-                onChange={handleChange}
-                style={inputStyle(Boolean(errors.audioFileName))}
+                id="audioFile"
+                type="file"
+                accept=".mp3,audio/mpeg"
+                onChange={handleAudioFileChange}
+                style={inputStyle(Boolean(errors.audioFile))}
               />
-              {errors.audioFileName && (
-                <div style={fieldErrorStyle()}>{errors.audioFileName}</div>
+              <div style={helperStyle()}>
+                Csak MP3 formátumú hangfájl tölthető fel.
+              </div>
+              {audioFile && (
+                <div style={helperStyle()}>
+                  Kiválasztott fájl: {audioFile.name}
+                </div>
+              )}
+              {errors.audioFile && (
+                <div style={fieldErrorStyle()}>{errors.audioFile}</div>
               )}
             </div>
 

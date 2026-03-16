@@ -18,18 +18,27 @@ import hu.szakdolgozat.backend.repository.SimulationAttemptRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AdminScenarioService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final Path AUDIO_UPLOAD_DIRECTORY = Paths.get("uploads", "audio");
 
     private final ScenarioRepository scenarioRepository;
     private final ScenarioCategoryRepository scenarioCategoryRepository;
@@ -87,11 +96,13 @@ public class AdminScenarioService {
 
         validateCoordinates(request.getLatitude(), request.getLongitude());
 
+        String storedAudioFileName = storeAudioFileForCreate(request.getAudioFile());
+
         Scenario scenario = new Scenario();
         scenario.setId(generateScenarioId());
         scenario.setTitle(request.getTitle().trim());
         scenario.setCategory(category);
-        scenario.setAudioFileName(request.getAudioFileName().trim());
+        scenario.setAudioFileName(storedAudioFileName);
         scenario.setGeoAddress(request.getAddress().trim());
         scenario.setLatitude(normalizeCoordinate(request.getLatitude()));
         scenario.setLongitude(normalizeCoordinate(request.getLongitude()));
@@ -150,9 +161,11 @@ public class AdminScenarioService {
 
         validateCoordinates(request.getLatitude(), request.getLongitude());
 
+        String storedAudioFileName = resolveAudioFileNameForUpdate(scenario, request);
+
         scenario.setTitle(request.getTitle().trim());
         scenario.setCategory(category);
-        scenario.setAudioFileName(request.getAudioFileName().trim());
+        scenario.setAudioFileName(storedAudioFileName);
         scenario.setGeoAddress(request.getAddress().trim());
         scenario.setLatitude(normalizeCoordinate(request.getLatitude()));
         scenario.setLongitude(normalizeCoordinate(request.getLongitude()));
@@ -283,6 +296,95 @@ public class AdminScenarioService {
 
     private BigDecimal normalizeCoordinate(BigDecimal coordinate) {
         return coordinate.stripTrailingZeros();
+    }
+
+    private String storeAudioFileForCreate(MultipartFile audioFile) {
+        if (audioFile == null || audioFile.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "MP3 hangfájl feltöltése kötelező."
+            );
+        }
+
+        validateMp3File(audioFile);
+        return saveAudioFile(audioFile);
+    }
+
+    private String resolveAudioFileNameForUpdate(Scenario scenario, CreateScenarioRequest request) {
+        MultipartFile audioFile = request.getAudioFile();
+
+        if (audioFile != null && !audioFile.isEmpty()) {
+            validateMp3File(audioFile);
+            String savedFileName = saveAudioFile(audioFile);
+
+            if (scenario.getAudioFileName() != null && !scenario.getAudioFileName().isBlank()) {
+                deleteAudioFileQuietly(scenario.getAudioFileName());
+            }
+
+            return savedFileName;
+        }
+
+        String existingAudioFileName = request.getExistingAudioFileName();
+
+        if (existingAudioFileName != null && !existingAudioFileName.isBlank()) {
+            return existingAudioFileName.trim();
+        }
+
+        if (scenario.getAudioFileName() != null && !scenario.getAudioFileName().isBlank()) {
+            return scenario.getAudioFileName();
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "MP3 hangfájl feltöltése kötelező."
+        );
+    }
+
+    private void validateMp3File(MultipartFile audioFile) {
+        String originalFilename = StringUtils.cleanPath(audioFile.getOriginalFilename() == null ? "" : audioFile.getOriginalFilename());
+
+        if (originalFilename.isBlank() || !originalFilename.toLowerCase().endsWith(".mp3")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Csak MP3 formátumú hangfájl tölthető fel."
+            );
+        }
+    }
+
+    private String saveAudioFile(MultipartFile audioFile) {
+        try {
+            Files.createDirectories(AUDIO_UPLOAD_DIRECTORY);
+
+            String originalFilename = StringUtils.cleanPath(audioFile.getOriginalFilename() == null ? "" : audioFile.getOriginalFilename());
+            String extension = ".mp3";
+
+            if (originalFilename.toLowerCase().endsWith(".mp3")) {
+                extension = originalFilename.substring(originalFilename.length() - 4);
+            }
+
+            String storedFileName = UUID.randomUUID() + extension;
+            Path targetPath = AUDIO_UPLOAD_DIRECTORY.resolve(storedFileName);
+
+            Files.copy(audioFile.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+            return storedFileName;
+        } catch (IOException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Nem sikerült elmenteni a hangfájlt."
+            );
+        }
+    }
+
+    private void deleteAudioFileQuietly(String fileName) {
+        try {
+            if (fileName == null || fileName.isBlank()) {
+                return;
+            }
+
+            Files.deleteIfExists(AUDIO_UPLOAD_DIRECTORY.resolve(fileName));
+        } catch (IOException ignored) {
+        }
     }
 
     private String generateScenarioId() {
