@@ -19,4 +19,6 @@ public interface ScenarioRepository extends JpaRepository<Scenario, String> {
     Optional<Scenario> findFirstByIsActiveTrueOrderByCreatedAtDesc();
 
     Optional<Scenario> findTopByOrderByIdDesc();
+
+    List<Scenario> findAllByOrderByCreatedAtDesc();
 }

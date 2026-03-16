@@ -1,155 +1,128 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createAdminScenario } from "../services/adminService";
+import "leaflet/dist/leaflet.css";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { createAdminScenario, getAdminUnits } from "../services/adminService";
 import { getScenarioCategories } from "../services/referenceService";
-import { getSimulationUnits } from "../services/simulationService";
+import {
+  parseCoordinateInput,
+  reverseGeocode,
+  searchLocations,
+} from "../services/geocodingService";
 
-function AdminCreateScenarioPage() {
-  const navigate = useNavigate();
-
-  const [categories, setCategories] = useState([]);
-  const [unitGroups, setUnitGroups] = useState({
-    fire: [],
-    ambulance: [],
-    police: [],
-  });
-
-  const [formData, setFormData] = useState({
-    title: "",
-    categoryName: "",
-    address: "",
-    audioFileName: "",
-    expectedNote: "",
-  });
-
-  const [selectedUnitIds, setSelectedUnitIds] = useState([]);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+function FlyToLocation({ position }) {
+  const map = useMap();
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadReferenceData() {
-      setIsLoading(true);
-      setError("");
-
-      try {
-        const [categoryResponse, unitResponse] = await Promise.all([
-          getScenarioCategories(),
-          getSimulationUnits(),
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        const loadedCategories = Array.isArray(categoryResponse) ? categoryResponse : [];
-
-        setCategories(loadedCategories);
-        setUnitGroups({
-          fire: Array.isArray(unitResponse?.fire) ? unitResponse.fire : [],
-          ambulance: Array.isArray(unitResponse?.ambulance) ? unitResponse.ambulance : [],
-          police: Array.isArray(unitResponse?.police) ? unitResponse.police : [],
-        });
-
-        if (loadedCategories.length > 0) {
-          setFormData((prev) => ({
-            ...prev,
-            categoryName: prev.categoryName || loadedCategories[0].name,
-          }));
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err.message || "Nem sikerült betölteni a referenciaadatokat.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadReferenceData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    setError("");
-    setMessage("");
-  };
-
-  const handleToggleUnit = (unitId) => {
-    setSelectedUnitIds((prev) => {
-      if (prev.includes(unitId)) {
-        return prev.filter((id) => id !== unitId);
-      }
-
-      return [...prev, unitId];
-    });
-
-    setError("");
-    setMessage("");
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    setIsSubmitting(true);
-    setError("");
-    setMessage("");
-
-    try {
-      const response = await createAdminScenario({
-        title: formData.title,
-        categoryName: formData.categoryName,
-        address: formData.address,
-        audioFileName: formData.audioFileName,
-        expectedNote: formData.expectedNote,
-        selectedUnitIds,
+    if (position) {
+      map.flyTo([position.lat, position.lon], 16, {
+        animate: true,
+        duration: 0.8,
       });
-
-      setMessage(response.message || "A szituáció sikeresen létrejött.");
-
-      setTimeout(() => {
-        navigate("/admin/scenarios");
-      }, 800);
-    } catch (err) {
-      setError(err.message || "Nem sikerült létrehozni a szituációt.");
-    } finally {
-      setIsSubmitting(false);
     }
+  }, [map, position]);
+
+  return null;
+}
+
+function RightClickHandler({ onMapRightClick }) {
+  useMapEvents({
+    contextmenu(event) {
+      onMapRightClick(event.latlng);
+    },
+  });
+
+  return null;
+}
+
+function formatCoordinates(lat, lon) {
+  return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
+function shortenText(text, maxLength = 72) {
+  if (!text) {
+    return "";
+  }
+
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 3)}...`;
+}
+
+function inputStyle(hasError) {
+  return {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: "8px",
+    border: hasError ? "1px solid crimson" : "1px solid #d0d5dd",
+    boxSizing: "border-box",
+    backgroundColor: "#fff",
   };
+}
 
-  const renderUnitGroup = (title, units) => (
-    <div
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "12px",
-        padding: "14px",
-        backgroundColor: "#fafafa",
-      }}
-    >
-      <h4 style={{ marginTop: 0 }}>{title}</h4>
+function fieldErrorStyle() {
+  return {
+    color: "crimson",
+    fontSize: "13px",
+    marginTop: "5px",
+  };
+}
 
-      <div style={{ display: "grid", gap: "10px" }}>
+function helperStyle() {
+  return {
+    fontSize: "12px",
+    color: "#475467",
+    marginTop: "5px",
+    lineHeight: 1.4,
+  };
+}
+
+function sectionStyle() {
+  return {
+    border: "1px solid #d9d9d9",
+    borderRadius: "12px",
+    padding: "16px",
+    backgroundColor: "#fff",
+  };
+}
+
+function groupCardStyle(borderColor, backgroundColor) {
+  return {
+    border: `1px solid ${borderColor}`,
+    borderRadius: "12px",
+    backgroundColor,
+    padding: "14px",
+    minWidth: 0,
+  };
+}
+
+function unitItemStyle() {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "7px 9px",
+    borderRadius: "8px",
+    border: "1px solid #e4e7ec",
+    backgroundColor: "#fff",
+    fontSize: "14px",
+  };
+}
+
+function renderUnitGroup(title, units, selectedUnitIds, onToggleUnit, borderColor, backgroundColor) {
+  return (
+    <div style={groupCardStyle(borderColor, backgroundColor)}>
+      <h4 style={{ marginTop: 0, marginBottom: "10px" }}>{title}</h4>
+
+      <div style={{ display: "grid", gap: "8px", maxHeight: "260px", overflowY: "auto" }}>
         {units.map((unit) => (
-          <label key={unit.id} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <label key={unit.id} style={unitItemStyle()}>
             <input
               type="checkbox"
               checked={selectedUnitIds.includes(unit.id)}
-              onChange={() => handleToggleUnit(unit.id)}
+              onChange={() => onToggleUnit(unit.id)}
             />
             <span>{unit.name}</span>
           </label>
@@ -157,112 +130,611 @@ function AdminCreateScenarioPage() {
       </div>
     </div>
   );
+}
 
-  if (isLoading) {
-    return <p>Betöltés...</p>;
+function AdminCreateScenarioPage() {
+  const navigate = useNavigate();
+
+  const [categories, setCategories] = useState([]);
+  const [units, setUnits] = useState({ fire: [], ambulance: [], police: [] });
+
+  const [formData, setFormData] = useState({
+    title: "",
+    categoryName: "",
+    address: "",
+    audioFileName: "",
+    expectedNote: "",
+    selectedUnitIds: [],
+    latitude: "",
+    longitude: "",
+  });
+
+  const [locationSearchText, setLocationSearchText] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [coordinateInput, setCoordinateInput] = useState("");
+  const [selectedCoordinates, setSelectedCoordinates] = useState(null);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+
+  const [errors, setErrors] = useState({});
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [categoriesResponse, unitsResponse] = await Promise.all([
+          getScenarioCategories(),
+          getAdminUnits(),
+        ]);
+
+        setCategories(Array.isArray(categoriesResponse) ? categoriesResponse : []);
+        setUnits({
+          fire: Array.isArray(unitsResponse?.fire) ? unitsResponse.fire : [],
+          ambulance: Array.isArray(unitsResponse?.ambulance) ? unitsResponse.ambulance : [],
+          police: Array.isArray(unitsResponse?.police) ? unitsResponse.police : [],
+        });
+      } catch (err) {
+        setMessage(err.message || "Nem sikerült betölteni a szükséges adatokat.");
+      }
+    }
+
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    const trimmed = locationSearchText.trim();
+
+    if (!trimmed) {
+      setLocationSuggestions([]);
+      setIsSearchingLocation(false);
+      return;
+    }
+
+    if (selectedCoordinates && formData.address && trimmed === formData.address.trim()) {
+      setLocationSuggestions([]);
+      setIsSearchingLocation(false);
+      return;
+    }
+
+    const parsedCoordinates = parseCoordinateInput(trimmed);
+
+    if (parsedCoordinates) {
+      setLocationSuggestions([]);
+      setIsSearchingLocation(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsSearchingLocation(true);
+
+      try {
+        const results = await searchLocations(trimmed);
+
+        setLocationSuggestions(
+          results.map((item) => ({
+            ...item,
+            shortDisplayName: shortenText(
+              item.formattedAddress || item.displayName,
+              72
+            ),
+          }))
+        );
+      } catch (err) {
+        setLocationSuggestions([]);
+      } finally {
+        setIsSearchingLocation(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [locationSearchText, formData.address, selectedCoordinates]);
+
+  useEffect(() => {
+    const trimmed = coordinateInput.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    const parsed = parseCoordinateInput(trimmed);
+
+    if (!parsed) {
+      return;
+    }
+
+    if (
+      selectedCoordinates &&
+      Math.abs(selectedCoordinates.lat - parsed.lat) < 0.000001 &&
+      Math.abs(selectedCoordinates.lon - parsed.lon) < 0.000001
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const reversed = await reverseGeocode(parsed.lat, parsed.lon);
+        applyChosenLocation(reversed);
+      } catch (err) {
+        setMessage(err.message || "Nem sikerült a koordináták alapján címet találni.");
+      }
+    }, 450);
+
+    return () => clearTimeout(timeoutId);
+  }, [coordinateInput, selectedCoordinates]);
+
+  function applyChosenLocation(locationItem) {
+    const formattedAddress =
+      locationItem.formattedAddress || locationItem.displayName || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      address: formattedAddress,
+      latitude: String(locationItem.lat),
+      longitude: String(locationItem.lon),
+    }));
+
+    setSelectedCoordinates({
+      lat: locationItem.lat,
+      lon: locationItem.lon,
+    });
+
+    setLocationSearchText(formattedAddress);
+    setCoordinateInput(formatCoordinates(locationItem.lat, locationItem.lon));
+    setLocationSuggestions([]);
+    setErrors((prev) => ({
+      ...prev,
+      address: "",
+      latitude: "",
+      longitude: "",
+    }));
+    setMessage("");
   }
 
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+
+    setMessage("");
+  }
+
+  function handleLocationSearchChange(value) {
+    setLocationSearchText(value);
+
+    if (!value.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        address: "",
+        latitude: "",
+        longitude: "",
+      }));
+      setSelectedCoordinates(null);
+      setCoordinateInput("");
+      setLocationSuggestions([]);
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      address: "",
+      latitude: "",
+      longitude: "",
+    }));
+    setSelectedCoordinates(null);
+    setMessage("");
+  }
+
+  function handleCoordinateInputChange(value) {
+    setCoordinateInput(value);
+
+    if (!value.trim()) {
+      setSelectedCoordinates(null);
+      setFormData((prev) => ({
+        ...prev,
+        address: "",
+        latitude: "",
+        longitude: "",
+      }));
+    }
+
+    setMessage("");
+  }
+
+  function handleSelectLocationSuggestion(item) {
+    applyChosenLocation(item);
+  }
+
+  async function handleMapRightClick(latlng) {
+    try {
+      const reversed = await reverseGeocode(latlng.lat, latlng.lng);
+      applyChosenLocation(reversed);
+      setMessage("A cím áthelyezése sikeres volt.");
+    } catch (err) {
+      setMessage(err.message || "Nem sikerült a cím áthelyezése.");
+    }
+  }
+
+  function handleToggleUnit(unitId) {
+    setFormData((prev) => {
+      const alreadySelected = prev.selectedUnitIds.includes(unitId);
+
+      return {
+        ...prev,
+        selectedUnitIds: alreadySelected
+          ? prev.selectedUnitIds.filter((id) => id !== unitId)
+          : [...prev.selectedUnitIds, unitId],
+      };
+    });
+
+    setErrors((prev) => ({
+      ...prev,
+      selectedUnitIds: "",
+    }));
+  }
+
+  function validateForm() {
+    const newErrors = {};
+
+    if (!formData.title.trim()) {
+      newErrors.title = "A cím megadása kötelező.";
+    }
+
+    if (!formData.categoryName.trim()) {
+      newErrors.categoryName = "A kategória kiválasztása kötelező.";
+    }
+
+    if (!formData.address.trim()) {
+      newErrors.address = "A helyszín kiválasztása kötelező.";
+    }
+
+    if (!formData.latitude || !formData.longitude || !selectedCoordinates) {
+      newErrors.address = "Érvényes helyszín és koordináta kiválasztása kötelező.";
+    }
+
+    if (!formData.audioFileName.trim()) {
+      newErrors.audioFileName = "A hangfájl neve kötelező.";
+    }
+
+    if (!formData.expectedNote.trim()) {
+      newErrors.expectedNote = "Az elvárt jegyzet megadása kötelező.";
+    }
+
+    if (formData.selectedUnitIds.length < 1) {
+      newErrors.selectedUnitIds = "Legalább egy egységet ki kell választani.";
+    }
+
+    return newErrors;
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const validationErrors = validateForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    try {
+      const response = await createAdminScenario({
+        ...formData,
+        latitude: Number(formData.latitude),
+        longitude: Number(formData.longitude),
+      });
+
+      navigate("/admin/scenarios", {
+        state: {
+          successMessage: response.message || "A szituáció sikeresen létrejött.",
+        },
+      });
+    } catch (err) {
+      setMessage(err.message || "Nem sikerült létrehozni a szituációt.");
+    }
+  }
+
+  const defaultCenter = { lat: 47.1625, lon: 19.5033 };
+  const currentCenter = selectedCoordinates || defaultCenter;
+
   return (
-    <div>
-      <h2>Új szituáció létrehozása</h2>
-      <p>Itt hozhatsz létre új, backendbe mentett szituációt.</p>
+    <div style={{ display: "grid", gap: "16px" }}>
+      <div>
+        <h2>Új szituáció létrehozása</h2>
+        <p>Itt hozhatsz létre új, backendbe mentett szituációt.</p>
+      </div>
 
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      {message && <p style={{ color: "green" }}>{message}</p>}
-
-      <form onSubmit={handleSubmit} style={{ marginTop: "20px", display: "grid", gap: "16px" }}>
-        <div>
-          <label>Cím</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
-          />
+      {message && (
+        <div style={{ color: message.includes("sikeres") ? "green" : "#b42318" }}>
+          {message}
         </div>
+      )}
 
-        <div>
-          <label>Kategória</label>
-          <select
-            name="categoryName"
-            value={formData.categoryName}
-            onChange={handleChange}
-            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
+        <div style={sectionStyle()}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label htmlFor="title">Cím</label>
+              <input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                style={inputStyle(Boolean(errors.title))}
+              />
+              {errors.title && <div style={fieldErrorStyle()}>{errors.title}</div>}
+            </div>
+
+            <div>
+              <label htmlFor="categoryName">Kategória</label>
+              <select
+                id="categoryName"
+                name="categoryName"
+                value={formData.categoryName}
+                onChange={handleChange}
+                style={inputStyle(Boolean(errors.categoryName))}
+              >
+                <option value="">Válassz kategóriát</option>
+                {categories.map((category) => (
+                  <option key={category.id || category.name} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {errors.categoryName && (
+                <div style={fieldErrorStyle()}>{errors.categoryName}</div>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: "12px",
+              display: "grid",
+              gridTemplateColumns: "1.4fr 1fr",
+              gap: "12px",
+              alignItems: "start",
+            }}
           >
-            {categories.map((category) => (
-              <option key={category.id} value={category.name}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            <div style={{ position: "relative" }}>
+              <label htmlFor="locationSearch">Helyszín</label>
+              <input
+                id="locationSearch"
+                value={locationSearchText}
+                onChange={(event) => handleLocationSearchChange(event.target.value)}
+                placeholder="Kezdj el címet írni..."
+                autoComplete="off"
+                style={inputStyle(Boolean(errors.address))}
+              />
+
+              <div style={helperStyle()}>
+                Az admin is OpenStreetMap alapú találatlistából válassza ki a helyszínt.
+              </div>
+
+              {isSearchingLocation && (
+                <div style={helperStyle()}>Címkeresés folyamatban...</div>
+              )}
+
+              {locationSuggestions.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: "100%",
+                    zIndex: 20,
+                    marginTop: "6px",
+                    border: "1px solid #d0d5dd",
+                    borderRadius: "10px",
+                    overflow: "hidden",
+                    backgroundColor: "#fff",
+                    boxShadow: "0 8px 24px rgba(16,24,40,0.12)",
+                    maxHeight: "220px",
+                    overflowY: "auto",
+                  }}
+                >
+                  {locationSuggestions.map((item, index) => (
+                    <div
+                      key={`${item.displayName}-${index}`}
+                      style={{
+                        padding: "10px 12px",
+                        borderBottom: "1px solid #eaecf0",
+                        cursor: "pointer",
+                        backgroundColor: "#fff",
+                      }}
+                      onMouseDown={() => handleSelectLocationSuggestion(item)}
+                    >
+                      <div style={{ fontWeight: 600 }}>{item.shortDisplayName}</div>
+                      <div style={{ fontSize: "12px", color: "#667085", marginTop: "2px" }}>
+                        {item.displayName}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {errors.address && <div style={fieldErrorStyle()}>{errors.address}</div>}
+            </div>
+
+            <div>
+              <label htmlFor="coordinateInput">Koordináták</label>
+              <input
+                id="coordinateInput"
+                value={coordinateInput}
+                onChange={(event) => handleCoordinateInputChange(event.target.value)}
+                placeholder="Pl.: 47.902300, 20.377200"
+                autoComplete="off"
+                style={inputStyle(Boolean(errors.address))}
+              />
+              <div style={helperStyle()}>
+                Ide közvetlenül koordináta is írható.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label htmlFor="audioFileName">Hangfájl neve</label>
+              <input
+                id="audioFileName"
+                name="audioFileName"
+                value={formData.audioFileName}
+                onChange={handleChange}
+                style={inputStyle(Boolean(errors.audioFileName))}
+              />
+              {errors.audioFileName && (
+                <div style={fieldErrorStyle()}>{errors.audioFileName}</div>
+              )}
+            </div>
+
+            <div>
+              <label>Mentett koordináták</label>
+              <input
+                value={
+                  selectedCoordinates
+                    ? `${selectedCoordinates.lat.toFixed(6)}, ${selectedCoordinates.lon.toFixed(6)}`
+                    : ""
+                }
+                readOnly
+                style={{
+                  ...inputStyle(false),
+                  backgroundColor: "#f8fafc",
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: "12px" }}>
+            <label htmlFor="expectedNote">Elvárt jegyzet</label>
+            <textarea
+              id="expectedNote"
+              name="expectedNote"
+              value={formData.expectedNote}
+              onChange={handleChange}
+              rows="5"
+              style={{
+                ...inputStyle(Boolean(errors.expectedNote)),
+                resize: "vertical",
+              }}
+            />
+            {errors.expectedNote && (
+              <div style={fieldErrorStyle()}>{errors.expectedNote}</div>
+            )}
+          </div>
         </div>
 
-        <div>
-          <label>Helyszín</label>
-          <input
-            type="text"
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
-          />
+        <div style={sectionStyle()}>
+          <h3 style={{ marginTop: 0 }}>Térkép</h3>
+          <div
+            style={{
+              borderRadius: "12px",
+              overflow: "hidden",
+              border: "1px solid #d9d9d9",
+            }}
+          >
+            <MapContainer
+              center={[currentCenter.lat, currentCenter.lon]}
+              zoom={7}
+              style={{ height: "320px", width: "100%" }}
+            >
+              <TileLayer
+                attribution="&copy; OpenStreetMap közreműködők"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+
+              <FlyToLocation position={selectedCoordinates} />
+              <RightClickHandler onMapRightClick={handleMapRightClick} />
+
+              {selectedCoordinates && (
+                <CircleMarker
+                  center={[selectedCoordinates.lat, selectedCoordinates.lon]}
+                  radius={9}
+                  pathOptions={{
+                    color: "#1f3c88",
+                    fillColor: "#1f3c88",
+                    fillOpacity: 0.7,
+                  }}
+                >
+                  <Popup>
+                    <div>
+                      <strong>Kiválasztott helyszín</strong>
+                      <br />
+                      {formData.address || "Nincs cím"}
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              )}
+            </MapContainer>
+          </div>
         </div>
 
-        <div>
-          <label>Hangfájl neve</label>
-          <input
-            type="text"
-            name="audioFileName"
-            value={formData.audioFileName}
-            onChange={handleChange}
-            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
-          />
-        </div>
+        <div style={sectionStyle()}>
+          <h3 style={{ marginTop: 0 }}>Elvárt egységek</h3>
 
-        <div>
-          <label>Elvárt jegyzet</label>
-          <textarea
-            name="expectedNote"
-            value={formData.expectedNote}
-            onChange={handleChange}
-            rows="5"
-            style={{ width: "100%", padding: "10px", marginTop: "6px" }}
-          />
-        </div>
-
-        <div>
-          <h3>Elvárt egységek</h3>
+          {errors.selectedUnitIds && (
+            <div style={{ ...fieldErrorStyle(), marginBottom: "10px" }}>
+              {errors.selectedUnitIds}
+            </div>
+          )}
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "16px",
-              marginTop: "12px",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: "14px",
             }}
           >
-            {renderUnitGroup("Tűzoltóság", unitGroups.fire)}
-            {renderUnitGroup("Mentőszolgálat", unitGroups.ambulance)}
-            {renderUnitGroup("Rendőrség", unitGroups.police)}
+            {renderUnitGroup(
+              "Tűzoltóság",
+              units.fire,
+              formData.selectedUnitIds,
+              handleToggleUnit,
+              "#f3c7c4",
+              "#fff7f7"
+            )}
+            {renderUnitGroup(
+              "Mentőszolgálat",
+              units.ambulance,
+              formData.selectedUnitIds,
+              handleToggleUnit,
+              "#c7e7d0",
+              "#f7fffa"
+            )}
+            {renderUnitGroup(
+              "Rendőrség",
+              units.police,
+              formData.selectedUnitIds,
+              handleToggleUnit,
+              "#c9d8f2",
+              "#f8fbff"
+            )}
           </div>
         </div>
 
-        <div>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button type="submit" className="auth-form-button">
+            Szituáció létrehozása
+          </button>
+
           <button
-            type="submit"
-            disabled={isSubmitting}
+            type="button"
+            onClick={() => navigate("/admin/scenarios")}
             style={{
-              padding: "12px 18px",
-              border: "none",
+              padding: "10px 14px",
               borderRadius: "8px",
-              backgroundColor: "#1f3c88",
-              color: "#fff",
-              fontWeight: 600,
+              border: "1px solid #d0d5dd",
+              backgroundColor: "#fff",
               cursor: "pointer",
+              fontWeight: 600,
             }}
           >
-            {isSubmitting ? "Mentés..." : "Szituáció mentése"}
+            Vissza
           </button>
         </div>
       </form>

@@ -54,6 +54,14 @@ public class AdminScenarioService {
         this.simulationAttemptRepository = simulationAttemptRepository;
     }
 
+    @Transactional(readOnly = true)
+    public List<ScenarioDetailsResponse> getAllScenarios() {
+        return scenarioRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::mapScenarioToDetailsResponse)
+                .toList();
+    }
+
     @Transactional
     public CreateScenarioResponse createScenario(String username, CreateScenarioRequest request) {
         AppUser creator = appUserRepository.findByUsername(username)
@@ -77,14 +85,16 @@ public class AdminScenarioService {
             );
         }
 
+        validateCoordinates(request.getLatitude(), request.getLongitude());
+
         Scenario scenario = new Scenario();
         scenario.setId(generateScenarioId());
         scenario.setTitle(request.getTitle().trim());
         scenario.setCategory(category);
         scenario.setAudioFileName(request.getAudioFileName().trim());
         scenario.setGeoAddress(request.getAddress().trim());
-        scenario.setLatitude(BigDecimal.ZERO);
-        scenario.setLongitude(BigDecimal.ZERO);
+        scenario.setLatitude(normalizeCoordinate(request.getLatitude()));
+        scenario.setLongitude(normalizeCoordinate(request.getLongitude()));
         scenario.setExpectedNote(request.getExpectedNote().trim());
         scenario.setCreatedByUser(creator);
         scenario.setIsActive(true);
@@ -92,7 +102,6 @@ public class AdminScenarioService {
         scenario.setUpdatedAt(LocalDateTime.now());
 
         Scenario savedScenario = scenarioRepository.save(scenario);
-
         saveRequiredUnits(savedScenario, selectedUnits);
 
         return new CreateScenarioResponse(
@@ -113,31 +122,7 @@ public class AdminScenarioService {
                         "A szituáció nem található."
                 ));
 
-        List<ScenarioRequiredUnit> requiredUnits = scenarioRequiredUnitRepository.findByScenario_Id(scenarioId);
-
-        List<Long> selectedUnitIds = requiredUnits.stream()
-                .map(item -> item.getEmergencyUnit().getId())
-                .toList();
-
-        List<String> selectedUnitNames = requiredUnits.stream()
-                .map(item -> item.getEmergencyUnit().getDisplayName())
-                .sorted()
-                .toList();
-
-        return new ScenarioDetailsResponse(
-                scenario.getId(),
-                scenario.getTitle(),
-                scenario.getCategory().getName(),
-                scenario.getGeoAddress(),
-                scenario.getAudioFileName(),
-                scenario.getExpectedNote(),
-                scenario.getIsActive(),
-                selectedUnitIds,
-                selectedUnitNames,
-                scenario.getCreatedByUser() != null ? scenario.getCreatedByUser().getUsername() : null,
-                scenario.getCreatedAt(),
-                scenario.getUpdatedAt()
-        );
+        return mapScenarioToDetailsResponse(scenario);
     }
 
     @Transactional
@@ -163,10 +148,14 @@ public class AdminScenarioService {
             );
         }
 
+        validateCoordinates(request.getLatitude(), request.getLongitude());
+
         scenario.setTitle(request.getTitle().trim());
         scenario.setCategory(category);
         scenario.setAudioFileName(request.getAudioFileName().trim());
         scenario.setGeoAddress(request.getAddress().trim());
+        scenario.setLatitude(normalizeCoordinate(request.getLatitude()));
+        scenario.setLongitude(normalizeCoordinate(request.getLongitude()));
         scenario.setExpectedNote(request.getExpectedNote().trim());
         scenario.setUpdatedAt(LocalDateTime.now());
 
@@ -174,7 +163,6 @@ public class AdminScenarioService {
 
         scenarioRequiredUnitRepository.deleteByScenario_Id(savedScenario.getId());
         scenarioRequiredUnitRepository.flush();
-
         saveRequiredUnits(savedScenario, selectedUnits);
 
         return new CreateScenarioResponse(
@@ -245,6 +233,36 @@ public class AdminScenarioService {
         return "A szituáció sikeresen törölve lett.";
     }
 
+    private ScenarioDetailsResponse mapScenarioToDetailsResponse(Scenario scenario) {
+        List<ScenarioRequiredUnit> requiredUnits = scenarioRequiredUnitRepository.findByScenario_Id(scenario.getId());
+
+        List<Long> selectedUnitIds = requiredUnits.stream()
+                .map(item -> item.getEmergencyUnit().getId())
+                .toList();
+
+        List<String> selectedUnitNames = requiredUnits.stream()
+                .map(item -> item.getEmergencyUnit().getDisplayName())
+                .sorted()
+                .toList();
+
+        return new ScenarioDetailsResponse(
+                scenario.getId(),
+                scenario.getTitle(),
+                scenario.getCategory().getName(),
+                scenario.getGeoAddress(),
+                scenario.getAudioFileName(),
+                scenario.getExpectedNote(),
+                scenario.getIsActive(),
+                selectedUnitIds,
+                selectedUnitNames,
+                scenario.getCreatedByUser() != null ? scenario.getCreatedByUser().getUsername() : null,
+                scenario.getCreatedAt(),
+                scenario.getUpdatedAt(),
+                scenario.getLatitude(),
+                scenario.getLongitude()
+        );
+    }
+
     private void saveRequiredUnits(Scenario scenario, List<EmergencyUnit> selectedUnits) {
         for (EmergencyUnit unit : selectedUnits) {
             ScenarioRequiredUnit requiredUnit = new ScenarioRequiredUnit();
@@ -252,6 +270,19 @@ public class AdminScenarioService {
             requiredUnit.setEmergencyUnit(unit);
             scenarioRequiredUnitRepository.save(requiredUnit);
         }
+    }
+
+    private void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
+        if (latitude == null || longitude == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A helyszínhez tartozó koordináták megadása kötelező."
+            );
+        }
+    }
+
+    private BigDecimal normalizeCoordinate(BigDecimal coordinate) {
+        return coordinate.stripTrailingZeros();
     }
 
     private String generateScenarioId() {

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -19,6 +20,11 @@ public class AdminScenarioController {
 
     public AdminScenarioController(AdminScenarioService adminScenarioService) {
         this.adminScenarioService = adminScenarioService;
+    }
+
+    @GetMapping("/list")
+    public List<ScenarioDetailsResponse> getScenarios() {
+        return adminScenarioService.getAllScenarios();
     }
 
     @PostMapping

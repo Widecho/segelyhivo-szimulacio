@@ -3,6 +3,7 @@ package hu.szakdolgozat.backend.dto.scenario;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,4 +23,6 @@ public class ScenarioDetailsResponse {
     private String createdByUsername;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
 }

@@ -1,5 +1,6 @@
 package hu.szakdolgozat.backend.controller;
 
+import hu.szakdolgozat.backend.entity.EmergencyUnit;
 import hu.szakdolgozat.backend.entity.ScenarioCategory;
 import hu.szakdolgozat.backend.repository.EmergencyServiceTypeRepository;
 import hu.szakdolgozat.backend.repository.EmergencyUnitRepository;
@@ -51,6 +52,14 @@ public class ReferenceDataController {
     }
 
     @GetMapping("/api/reference/scenario-categories")
+    public List<Map<String, Object>> getScenarioCategoriesLegacy() {
+        return scenarioCategoryRepository.findAllByOrderByNameAsc()
+                .stream()
+                .map(this::mapCategory)
+                .toList();
+    }
+
+    @GetMapping("/api/reference/categories")
     public List<Map<String, Object>> getScenarioCategories() {
         return scenarioCategoryRepository.findAllByOrderByNameAsc()
                 .stream()
@@ -58,10 +67,35 @@ public class ReferenceDataController {
                 .toList();
     }
 
+    @GetMapping("/api/reference/units/grouped")
+    public Map<String, Object> getGroupedUnits() {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("fire", emergencyUnitRepository.findByServiceType_CodeAndIsActiveTrue("FIRE")
+                .stream()
+                .map(this::mapEmergencyUnit)
+                .toList());
+        response.put("ambulance", emergencyUnitRepository.findByServiceType_CodeAndIsActiveTrue("AMBULANCE")
+                .stream()
+                .map(this::mapEmergencyUnit)
+                .toList());
+        response.put("police", emergencyUnitRepository.findByServiceType_CodeAndIsActiveTrue("POLICE")
+                .stream()
+                .map(this::mapEmergencyUnit)
+                .toList());
+        return response;
+    }
+
     private Map<String, Object> mapCategory(ScenarioCategory category) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", category.getId());
         result.put("name", category.getName());
+        return result;
+    }
+
+    private Map<String, Object> mapEmergencyUnit(EmergencyUnit unit) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", unit.getId());
+        result.put("name", unit.getDisplayName());
         return result;
     }
 }
