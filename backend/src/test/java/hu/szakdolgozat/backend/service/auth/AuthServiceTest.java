@@ -130,5 +130,41 @@ class AuthServiceTest {
         verify(jwtService).generateToken(user);
         verify(appUserRepository, never()).save(any(AppUser.class));
     }
+    @Test
+    void nemLetezoFelhasznalo() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("nincsilyen");
+        request.setPassword("Abc123");
+
+        when(appUserRepository.findByUsername("nincsilyen")).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () -> authService.login(request));
+
+        verify(jwtService, never()).generateToken(any(AppUser.class));
+        verify(appUserRepository, never()).save(any(AppUser.class));
+    }
+    @Test
+    void inaktivFelhasznaloNemJelentkezhetBe() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("teszt");
+        request.setPassword("Abc123");
+
+        Role role = new Role();
+        role.setName("USER");
+
+        AppUser user = new AppUser();
+        user.setUsername("teszt");
+        user.setPasswordHash("titkositott-jelszo");
+        user.setRole(role);
+        user.setIsActive(false);
+        user.setFailedLoginAttempts(0);
+
+        when(appUserRepository.findByUsername("teszt")).thenReturn(Optional.of(user));
+
+        assertThrows(ResponseStatusException.class, () -> authService.login(request));
+
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(jwtService, never()).generateToken(any(AppUser.class));
+    }
 }
 
